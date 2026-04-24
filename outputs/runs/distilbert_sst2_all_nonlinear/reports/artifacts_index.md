@@ -14,6 +14,10 @@
 | Validated greedy decisions | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/schedules/validated_greedy_decisions.csv` | `True` |
 | Softmax selection | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/schedules/softmax_selection.csv` | `True` |
 | Metrics | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/evaluations/metrics.csv` | `True` |
+| Distillation summary | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/summary.csv` | `True` |
+| Distillation overrides | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/overrides.pt` | `True` |
+| Distillation overrides summary | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/overrides_summary.csv` | `True` |
+| Distillation report | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/report.md` | `True` |
 | HE metrics | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/he_metrics.csv` | `True` |
 | HE cost breakdown | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/he_cost_breakdown.csv` | `True` |
 | HE bootstrap plan | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/bootstrap_plan.csv` | `True` |

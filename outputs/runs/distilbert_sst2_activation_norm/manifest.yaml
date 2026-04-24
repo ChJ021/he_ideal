@@ -3,7 +3,7 @@ operator_scope: activation_norm
 operator_types:
 - gelu
 - layernorm
-command: probe
+command: run-activate
 run_dir: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm
 artifacts:
   profile: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/profiles/sensitivity_matrix.csv
@@ -11,4 +11,7 @@ artifacts:
   schedule: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/schedules/hetune_generated.yaml
   decisions: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/schedules/validated_greedy_decisions.csv
   metrics: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/evaluations/metrics.csv
+  distillation_summary: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/distillation/summary.csv
+  distillation_overrides: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/distillation/overrides.pt
+  distillation_report: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/distillation/report.md
   report: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/reports/report.md

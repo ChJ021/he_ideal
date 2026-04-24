@@ -14,7 +14,7 @@ sequence_length: 128
 batch_size: 16
 calibration_size: 256
 validation_size: 256
-accuracy_tolerance: 0.005
+accuracy_tolerance: 0.01
 max_batches: null
 scheduler:
   policy: validated_greedy
@@ -42,3 +42,22 @@ baselines:
 - uniform_mid
 - uniform_high
 - hetune_greedy
+distillation:
+  enabled: true
+  schedule_name: hetune_generated
+  train_split: train
+  train_size: 2000
+  val_size: 512
+  epochs: 2
+  lr: 5.0e-05
+  batch_size: 16
+  temperature: 2.0
+  alpha_kl: 0.7
+  alpha_ce: 0.3
+  alpha_hidden: 1.0
+  weight_decay: 0.0
+  patience: 1
+  target_operator_types:
+  - layernorm
+  target_operator_names:
+  - ffn_layernorm

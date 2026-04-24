@@ -26,12 +26,28 @@ Calibration stats:
 - Tracked operators: `18`
 - Missing operators: `0`
 
+Distillation:
+
+- Summary: `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/summary.csv`
+- Report: `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/report.md`
+- Overrides: `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/overrides.pt`
+- Status: `available`
+
+all-nonlinear accuracy before/after distillation:
+
+| variant | schedule | accuracy |
+| --- | --- | --- |
+| all-nonlinear_before_distill | hetune_generated | 0.875000 |
+| all-nonlinear_after_distill | hetune_generated_distilled | 0.886719 |
+| all-nonlinear_delta | after-before | +0.011719 |
+
 ## Metrics
 
 | schedule | accuracy | latency_ms | rotations | ct_ct_mults | ct_pt_mults | rescale_count | relin_count | depth | bootstrap_count | memory_mb |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | base | 0.9140625 | 0.0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0.0 |
 | hetune_generated | 0.875 | 176.2 | 40 | 124 | 134 | 118 | 0 | 118 | 0 | 0.0 |
+| hetune_generated_distilled | 0.88671875 | 176.2 | 40 | 124 | 134 | 118 | 0 | 118 | 0 | 0.0 |
 | uniform_low | 0.48828125 | 16.8 | 6 | 12 | 36 | 12 | 0 | 12 | 0 | 0.0 |
 | uniform_mid | 0.48828125 | 35.400000000000006 | 18 | 36 | 54 | 36 | 0 | 36 | 0 | 0.0 |
 | uniform_high | 0.87890625 | 192.0 | 42 | 132 | 150 | 126 | 0 | 126 | 0 | 0.0 |

@@ -18,6 +18,7 @@ from hetune.experiments.artifacts import (
 from hetune.experiments.config import LoadedExperimentConfig, load_experiment_config
 from hetune.experiments.data import load_tokenized_dataset
 from hetune.experiments.diagnostics import write_combination_diagnostics
+from hetune.experiments.distillation import DistillationRunner, load_override_payload
 from hetune.experiments.reporting import write_report
 from hetune.experiments.visualization import write_sensitivity_heatmap
 from hetune.models.hf_adapter import HFSequenceClassifierAdapter
@@ -44,6 +45,7 @@ class ExperimentRunner:
         operator_scope: str | None = None,
         command_name: str = "run",
     ) -> None:
+        self.config_path = Path(config_path)
         self.loaded = load_experiment_config(config_path)
         self.operator_scope = operator_scope or self.loaded.experiment.get(
             "operator_scope",
@@ -69,6 +71,7 @@ class ExperimentRunner:
     def run(self) -> None:
         self.profile()
         self.tune()
+        self._run_distillation_if_enabled()
         self.evaluate()
         self._write_run_manifest(self.command_name)
         write_artifacts_index(
@@ -228,6 +231,7 @@ class ExperimentRunner:
         result = evaluator.run(dataset, schedule=schedule)
         cost_model = self._build_cost_model(registry)
         total_cost = cost_model.estimate_schedule(schedule)
+        distilled_payload = self._load_distillation_payload()
         rows = []
         base_path = self.paths.schedule_dir() / "base_reference.yaml"
         if not base_path.exists():
@@ -257,6 +261,19 @@ class ExperimentRunner:
                 **total_cost.to_dict(),
             }
         )
+        if distilled_payload is not None:
+            distilled_result = evaluator.run(
+                dataset,
+                schedule=schedule,
+                parameter_overrides=list(distilled_payload.get("entries", [])),
+            )
+            rows.append(
+                {
+                    "schedule": "hetune_generated_distilled",
+                    "accuracy": distilled_result.accuracy,
+                    **total_cost.to_dict(),
+                }
+            )
         for quality in ("low", "mid", "high"):
             baseline_path = self.paths.schedule_dir() / f"uniform_{quality}.yaml"
             if not baseline_path.exists():
@@ -287,6 +304,9 @@ class ExperimentRunner:
                 adapter.operators,
                 adapter.calibration_stats,
             ),
+            distillation_summary_path=self.paths.distillation_dir() / "summary.csv",
+            distillation_report_path=self.paths.distillation_dir() / "report.md",
+            distillation_overrides_path=self.paths.distillation_dir() / "overrides.pt",
             operator_scope=self.operator_scope,
             operator_types=self.operator_types,
         )
@@ -414,6 +434,20 @@ class ExperimentRunner:
             "operator_types": self.operator_types,
         }
 
+    def _run_distillation_if_enabled(self) -> Path | None:
+        if "layernorm" not in set(self.operator_types):
+            return None
+        if not self.loaded.experiment.get("distillation", {}).get("enabled", False):
+            return None
+        runner = DistillationRunner(self.config_path, command_name="distill")
+        return runner.run()
+
+    def _load_distillation_payload(self) -> dict[str, Any] | None:
+        overrides_path = self.paths.distillation_dir() / "overrides.pt"
+        if not overrides_path.exists():
+            return None
+        return load_override_payload(overrides_path)
+
     def _write_run_manifest(self, command_name: str) -> None:
         write_manifest(
             self.paths,
@@ -427,6 +461,9 @@ class ExperimentRunner:
                 "schedule": self.paths.schedule_dir() / "hetune_generated.yaml",
                 "decisions": self.paths.schedule_dir() / "validated_greedy_decisions.csv",
                 "metrics": self.paths.evaluation_dir() / "metrics.csv",
+                "distillation_summary": self.paths.distillation_dir() / "summary.csv",
+                "distillation_overrides": self.paths.distillation_dir() / "overrides.pt",
+                "distillation_report": self.paths.distillation_dir() / "report.md",
                 "report": self.paths.report_dir() / "report.md",
             },
         )

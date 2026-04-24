@@ -4,16 +4,15 @@ operator_types:
 - gelu
 - layernorm
 - softmax
-command: run-he
+command: run-all
 run_dir: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear
 artifacts:
   profile: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/profiles/sensitivity_matrix.csv
+  calibration_stats: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/profiles/operator_calibration_stats.csv
   schedule: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/schedules/hetune_generated.yaml
   decisions: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/schedules/validated_greedy_decisions.csv
   metrics: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/evaluations/metrics.csv
+  distillation_summary: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/summary.csv
+  distillation_overrides: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/overrides.pt
+  distillation_report: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/report.md
   report: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/reports/report.md
-  he_metrics: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/he_metrics.csv
-  he_breakdown: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/he_cost_breakdown.csv
-  he_profile_coverage: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/profile_coverage.csv
-  bootstrap_plan: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/bootstrap_plan.csv
-  he_report: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/reports/he_report.md

@@ -5,6 +5,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from hetune.experiments.distillation import DistillationRunner
 from hetune.experiments.he_analysis import HEAnalysisRunner
 from hetune.experiments.runner import ExperimentRunner
 
@@ -91,3 +92,10 @@ def evaluate(config: Path = typer.Option(..., "--config", "-c", help="Experiment
     """Evaluate generated schedules."""
     output = ExperimentRunner(config).evaluate()
     console.print(f"[green]Wrote metrics[/green] {output}")
+
+
+@app.command()
+def distill(config: Path = typer.Option(..., "--config", "-c", help="Experiment YAML")) -> None:
+    """Run standalone schedule distillation for the final generated schedule."""
+    output = DistillationRunner(config).run()
+    console.print(f"[green]Wrote distillation overrides[/green] {output}")

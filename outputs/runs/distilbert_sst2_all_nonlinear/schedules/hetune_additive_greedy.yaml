@@ -11,7 +11,7 @@ metadata:
   - layernorm
   - softmax
   policy: hetune_greedy
-  estimated_additive_accuracy_drop: 0.00390625
+  estimated_additive_accuracy_drop: 0.0078125
 entries:
 - operator_key:
     model_id: distilbert_sst2
@@ -71,7 +71,7 @@ entries:
   operator_id: distilbert_sst2.layer0.layernorm.ffn_layernorm
   layer_index: 0
   operator_type: layernorm
-  candidate_id: layernorm.newton.low_iter.v1
+  candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -398,7 +398,7 @@ entries:
   bootstrap_policy: none
   layout_id: plaintext_sim
 constraints:
-  max_accuracy_drop: 0.005
+  max_accuracy_drop: 0.01
   max_logit_kl: 0.02
   max_label_flip_rate: 0.01
   max_downgrades_per_layer: 2

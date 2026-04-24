@@ -11,16 +11,20 @@ def load_tokenized_dataset(
     split_key: str,
     sample_size: int | None,
     max_length: int,
+    split_name: str | None = None,
+    shuffle_seed: int | None = None,
 ):
     from datasets import load_dataset
 
     dataset_name = dataset_config["dataset_name"]
     dataset_subset = dataset_config.get("dataset_subset")
-    split = dataset_config[split_key]
+    split = split_name or dataset_config[split_key]
     if dataset_subset:
         dataset = load_dataset(dataset_name, dataset_subset, split=split)
     else:
         dataset = load_dataset(dataset_name, split=split)
+    if shuffle_seed is not None:
+        dataset = dataset.shuffle(seed=shuffle_seed)
     if sample_size is not None:
         sample_size = min(sample_size, len(dataset))
         dataset = dataset.select(range(sample_size))

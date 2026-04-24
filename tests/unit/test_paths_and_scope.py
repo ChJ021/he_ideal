@@ -10,6 +10,7 @@ def test_experiment_paths_are_grouped_by_run():
     assert paths.profile_dir() == Path("outputs/runs/exp/profiles")
     assert paths.schedule_dir() == Path("outputs/runs/exp/schedules")
     assert paths.evaluation_dir() == Path("outputs/runs/exp/evaluations")
+    assert paths.distillation_dir() == Path("outputs/runs/exp/distillation")
     assert paths.report_dir() == Path("outputs/runs/exp/reports")
 
 

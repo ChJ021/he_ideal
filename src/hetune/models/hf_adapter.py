@@ -235,6 +235,28 @@ class HFSequenceClassifierAdapter:
     def set_calibration_stats(self, stats: dict[str, dict[str, Any]]) -> None:
         self.calibration_stats = stats
 
+    def apply_parameter_overrides(self, overrides: list[dict[str, Any]]) -> None:
+        import torch
+
+        if self.model is None:
+            raise RuntimeError("Model must be loaded before applying parameter overrides")
+        by_id = {operator.id: operator for operator in self.operators}
+        for override in overrides:
+            operator_id = str(override["operator_id"])
+            operator_path = str(
+                override.get("operator_path") or by_id[operator_id].path
+            )
+            parameter_name = str(override["parameter_name"])
+            tensor = override["tensor"]
+            module = _get_attr(self.model, operator_path)
+            parameter = getattr(module, parameter_name, None)
+            if not isinstance(parameter, torch.nn.Parameter):
+                raise KeyError(
+                    f"Missing parameter {parameter_name} on scheduled module {operator_path}"
+                )
+            with torch.no_grad():
+                parameter.copy_(tensor.to(device=parameter.device, dtype=parameter.dtype))
+
     def _operator_context(self, operator: OperatorKey) -> dict[str, Any]:
         return {
             "operator": operator,

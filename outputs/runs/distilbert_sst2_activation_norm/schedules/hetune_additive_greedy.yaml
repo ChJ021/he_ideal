@@ -10,7 +10,7 @@ metadata:
   - gelu
   - layernorm
   policy: hetune_greedy
-  estimated_additive_accuracy_drop: 0.01953125
+  estimated_additive_accuracy_drop: 0.05859375
 entries:
 - operator_key:
     model_id: distilbert_sst2
@@ -166,7 +166,7 @@ entries:
   operator_id: distilbert_sst2.layer3.gelu.ffn_activation
   layer_index: 3
   operator_type: gelu
-  candidate_id: gelu.exact.high.v1
+  candidate_id: gelu.poly.degree3.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -301,7 +301,7 @@ entries:
   bootstrap_policy: none
   layout_id: plaintext_sim
 constraints:
-  max_accuracy_drop: 0.05
+  max_accuracy_drop: 0.1
   max_logit_kl: 0.02
   max_label_flip_rate: 0.01
   max_downgrades_per_layer: 1

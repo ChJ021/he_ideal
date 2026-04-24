@@ -28,6 +28,9 @@ def write_report(
     diagnostics_path: str | Path | None = None,
     calibration_stats_path: str | Path | None = None,
     calibration_coverage: dict[str, int] | None = None,
+    distillation_summary_path: str | Path | None = None,
+    distillation_report_path: str | Path | None = None,
+    distillation_overrides_path: str | Path | None = None,
     operator_scope: str | None = None,
     operator_types: list[str] | None = None,
 ) -> None:
@@ -39,6 +42,13 @@ def write_report(
     calibration_summary = _calibration_summary(
         calibration_stats_path,
         calibration_coverage,
+    )
+    distillation_summary = _distillation_summary(
+        distillation_summary_path,
+        distillation_report_path,
+        distillation_overrides_path,
+        metrics,
+        operator_scope or schedule.metadata.get("operator_scope"),
     )
     base_accuracy = _metric_value(metrics, "base", "accuracy")
     lines = [
@@ -64,6 +74,10 @@ def write_report(
         "Calibration stats:",
         "",
         calibration_summary,
+        "",
+        "Distillation:",
+        "",
+        distillation_summary,
         "",
         "## Metrics",
         "",
@@ -193,4 +207,66 @@ def _calibration_summary(
         lines.append(f"- Missing operators: `{coverage.get('missing', 0)}`")
     if not target.exists():
         lines.append("- Status: `missing`")
+    return "\n".join(lines)
+
+
+def _distillation_summary(
+    summary_path: str | Path | None,
+    report_path: str | Path | None,
+    overrides_path: str | Path | None,
+    metrics: pd.DataFrame,
+    operator_scope: str | None,
+) -> str:
+    if summary_path is None and report_path is None and overrides_path is None:
+        return "- Status: `not_configured`"
+    summary = Path(summary_path) if summary_path is not None else None
+    report = Path(report_path) if report_path is not None else None
+    overrides = Path(overrides_path) if overrides_path is not None else None
+    distilled_accuracy = _metric_value(metrics, "hetune_generated_distilled", "accuracy")
+    generated_accuracy = _metric_value(metrics, "hetune_generated", "accuracy")
+    scope_label = (operator_scope or "current_scope").replace("_", "-")
+    lines = []
+    if summary is not None:
+        lines.append(f"- Summary: `{summary}`")
+    if report is not None:
+        lines.append(f"- Report: `{report}`")
+    if overrides is not None:
+        lines.append(f"- Overrides: `{overrides}`")
+    status = "available" if overrides is not None and overrides.exists() else "not_run"
+    lines.append(f"- Status: `{status}`")
+    if generated_accuracy is not None and distilled_accuracy is not None:
+        delta = distilled_accuracy - generated_accuracy
+        lines.extend(
+            [
+                "",
+                f"{scope_label} accuracy before/after distillation:",
+                "",
+                _markdown_table(
+                    pd.DataFrame(
+                        [
+                            {
+                                "variant": f"{scope_label}_before_distill",
+                                "schedule": "hetune_generated",
+                                "accuracy": f"{generated_accuracy:.6f}",
+                            },
+                            {
+                                "variant": f"{scope_label}_after_distill",
+                                "schedule": "hetune_generated_distilled",
+                                "accuracy": f"{distilled_accuracy:.6f}",
+                            },
+                            {
+                                "variant": f"{scope_label}_delta",
+                                "schedule": "after-before",
+                                "accuracy": f"{delta:+.6f}",
+                            },
+                        ]
+                    )
+                ),
+            ]
+        )
+    else:
+        if generated_accuracy is not None:
+            lines.append(f"- Generated accuracy: `{generated_accuracy:.6f}`")
+        if distilled_accuracy is not None:
+            lines.append(f"- Distilled accuracy: `{distilled_accuracy:.6f}`")
     return "\n".join(lines)

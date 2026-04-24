@@ -397,7 +397,7 @@ entries:
   bootstrap_policy: none
   layout_id: plaintext_sim
 constraints:
-  max_accuracy_drop: 0.005
+  max_accuracy_drop: 0.01
   max_logit_kl: 0.02
   max_label_flip_rate: 0.01
   max_downgrades_per_layer: 2

@@ -36,6 +36,7 @@ class PlaintextEvaluator:
         dataset: Any,
         schedule: SchedulePlan | None = None,
         operator_filter: set[str] | None = None,
+        parameter_overrides: list[dict[str, Any]] | None = None,
     ) -> EvaluationResult:
         import torch
         from torch.utils.data import DataLoader
@@ -44,7 +45,11 @@ class PlaintextEvaluator:
             raise RuntimeError("Model must be loaded before evaluation")
         if schedule is not None:
             self.adapter.apply_schedule(schedule, self.registry, operator_filter)
+            if parameter_overrides:
+                self.adapter.apply_parameter_overrides(parameter_overrides)
         else:
+            if parameter_overrides:
+                raise ValueError("parameter_overrides require a schedule")
             self.adapter.restore_original()
 
         loader = DataLoader(dataset, batch_size=self.batch_size)
