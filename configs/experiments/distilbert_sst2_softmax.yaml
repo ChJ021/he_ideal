@@ -1,0 +1,41 @@
+experiment_id: distilbert_sst2_softmax
+operator_scope: softmax_only
+operator_types:
+  - softmax
+model_config: ../models/distilbert_sst2.yaml
+dataset_config: ../datasets/sst2.yaml
+approximation_config: ../approximations/softmax_candidates.yaml
+ckks_config: ../ckks/static_ckks_128.yaml
+output_root: outputs
+device: cuda
+sequence_length: 128
+batch_size: 16
+calibration_size: 256
+validation_size: 256
+accuracy_tolerance: 0.005
+max_batches:
+scheduler:
+  policy: validated_greedy
+  max_logit_kl: 0.02
+  max_label_flip_rate: 0.01
+  max_downgrades_per_layer: 1
+  protected_operator_types: []
+  min_quality_rank_by_operator_type:
+    softmax: 35
+run_combination_diagnostics: true
+combination_diagnostic_quality: low
+cost_weights:
+  latency_ms: 1.0
+  rotations: 0.05
+  ct_ct_mults: 1.0
+  ct_pt_mults: 0.15
+  rescale_count: 0.4
+  relin_count: 0.4
+  depth: 1.5
+  bootstrap_count: 50.0
+  memory_mb: 0.01
+baselines:
+  - uniform_low
+  - uniform_mid
+  - uniform_high
+  - hetune_greedy

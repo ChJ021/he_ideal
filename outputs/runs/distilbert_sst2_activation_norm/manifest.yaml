@@ -1,0 +1,14 @@
+experiment_id: distilbert_sst2_activation_norm
+operator_scope: activation_norm
+operator_types:
+- gelu
+- layernorm
+command: probe
+run_dir: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm
+artifacts:
+  profile: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/profiles/sensitivity_matrix.csv
+  calibration_stats: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/profiles/operator_calibration_stats.csv
+  schedule: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/schedules/hetune_generated.yaml
+  decisions: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/schedules/validated_greedy_decisions.csv
+  metrics: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/evaluations/metrics.csv
+  report: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_activation_norm/reports/report.md

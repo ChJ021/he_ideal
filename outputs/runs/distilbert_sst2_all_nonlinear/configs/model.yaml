@@ -1,0 +1,9 @@
+model_id: distilbert_sst2
+model_name_or_path: distilbert-base-uncased-finetuned-sst-2-english
+model_type: distilbert
+num_labels: 2
+trust_remote_code: false
+notes: 'Fine-tuned SST-2 checkpoint for meaningful plaintext accuracy. This is larger
+  than BERT-Tiny but is a practical default when accuracy matters.
+
+  '

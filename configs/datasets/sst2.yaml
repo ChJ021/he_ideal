@@ -1,0 +1,9 @@
+dataset_id: sst2
+dataset_name: glue
+dataset_subset: sst2
+calibration_split: train
+validation_split: validation
+text_fields:
+  - sentence
+label_column: label
+metric: accuracy

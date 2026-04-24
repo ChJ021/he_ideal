@@ -1,0 +1,11 @@
+candidates:
+  - candidate_id: gelu.base
+    enabled: true
+  - candidate_id: gelu.exact.high.v1
+    enabled: true
+  - candidate_id: gelu.poly.degree5.v1
+    enabled: true
+  - candidate_id: gelu.poly.degree3.v1
+    enabled: true
+  - candidate_id: gelu.poly.degree2.v1
+    enabled: true

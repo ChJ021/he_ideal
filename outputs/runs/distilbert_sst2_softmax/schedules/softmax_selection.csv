@@ -1,0 +1,7 @@
+operator_id,layer_index,operator_type,operator_name,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb
+distilbert_sst2.layer0.softmax.attention_softmax,0,softmax,attention_softmax,softmax.power.degree2.v1,1.2,1,1,2,1,0,1,0,0.0
+distilbert_sst2.layer1.softmax.attention_softmax,1,softmax,attention_softmax,softmax.power.degree2.v1,1.2,1,1,2,1,0,1,0,0.0
+distilbert_sst2.layer2.softmax.attention_softmax,2,softmax,attention_softmax,softmax.power.degree2.v1,1.2,1,1,2,1,0,1,0,0.0
+distilbert_sst2.layer3.softmax.attention_softmax,3,softmax,attention_softmax,softmax.power.degree2.v1,1.2,1,1,2,1,0,1,0,0.0
+distilbert_sst2.layer4.softmax.attention_softmax,4,softmax,attention_softmax,softmax.power.degree2.v1,1.2,1,1,2,1,0,1,0,0.0
+distilbert_sst2.layer5.softmax.attention_softmax,5,softmax,attention_softmax,softmax.power.degree2.v1,1.2,1,1,2,1,0,1,0,0.0

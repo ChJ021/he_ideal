@@ -1,0 +1,13 @@
+experiment_id: distilbert_sst2_softmax
+operator_scope: softmax_only
+operator_types:
+- softmax
+command: run-softmax
+run_dir: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_softmax
+artifacts:
+  profile: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_softmax/profiles/sensitivity_matrix.csv
+  calibration_stats: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_softmax/profiles/operator_calibration_stats.csv
+  schedule: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_softmax/schedules/hetune_generated.yaml
+  decisions: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_softmax/schedules/validated_greedy_decisions.csv
+  metrics: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_softmax/evaluations/metrics.csv
+  report: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_softmax/reports/report.md

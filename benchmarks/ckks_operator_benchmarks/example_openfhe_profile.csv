@@ -1,0 +1,13 @@
+backend_id,ckks_param_id,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb
+openfhe_cpu,ckks_128_profiled,gelu.exact.high.v1,7.6,0,6,0,6,3,6,0,34.0
+openfhe_cpu,ckks_128_profiled,gelu.poly.degree5.v1,4.1,0,3,4,3,2,3,0,26.0
+openfhe_cpu,ckks_128_profiled,gelu.poly.degree3.v1,2.3,0,2,3,2,1,2,0,20.0
+openfhe_cpu,ckks_128_profiled,gelu.poly.degree2.v1,1.2,0,1,2,1,0,1,0,16.0
+openfhe_cpu,ckks_128_profiled,layernorm.exact.high.v1,11.8,10,5,2,5,2,5,0,64.0
+openfhe_cpu,ckks_128_profiled,layernorm.newton.low_iter.v1,6.4,8,3,2,3,1,3,0,48.0
+openfhe_cpu,ckks_128_profiled,layernorm.centered.mid_cost.v1,3.0,4,1,2,1,0,1,0,34.0
+openfhe_cpu,ckks_128_profiled,layernorm.affine.low_cost.v1,0.9,0,0,1,0,0,0,0,18.0
+openfhe_cpu,ckks_128_profiled,softmax.exact.high.v1,18.5,18,6,0,6,3,6,0,96.0
+openfhe_cpu,ckks_128_profiled,softmax.clipped.stable.v1,12.2,14,4,2,4,2,4,0,82.0
+openfhe_cpu,ckks_128_profiled,softmax.poly_exp.degree2.v1,7.4,10,2,2,2,1,2,0,60.0
+openfhe_cpu,ckks_128_profiled,softmax.power.degree2.v1,4.6,8,1,2,1,0,1,0,52.0

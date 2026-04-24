@@ -1,0 +1,11 @@
+candidates:
+  - candidate_id: layernorm.base
+    enabled: true
+  - candidate_id: layernorm.exact.high.v1
+    enabled: true
+  - candidate_id: layernorm.newton.low_iter.v1
+    enabled: true
+  - candidate_id: layernorm.centered.mid_cost.v1
+    enabled: true
+  - candidate_id: layernorm.affine.low_cost.v1
+    enabled: true

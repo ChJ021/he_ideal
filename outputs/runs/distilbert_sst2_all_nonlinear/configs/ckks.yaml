@@ -1,0 +1,14 @@
+ckks_param_id: static_ckks_128
+backend: static-only
+security_bits: 128
+poly_modulus_degree: 32768
+coefficient_modulus_chain:
+- 60
+- 40
+- 40
+- 40
+- 40
+- 60
+default_scale: 2^40
+bootstrapping_supported: false
+backend_profile_path: outputs/cost_tables/static_ckks_128/candidate_costs.csv

@@ -1,0 +1,31 @@
+candidates:
+  - candidate_id: gelu.base
+    enabled: true
+  - candidate_id: gelu.exact.high.v1
+    enabled: true
+  - candidate_id: gelu.poly.degree5.v1
+    enabled: true
+  - candidate_id: gelu.poly.degree3.v1
+    enabled: true
+  - candidate_id: gelu.poly.degree2.v1
+    enabled: true
+  - candidate_id: layernorm.base
+    enabled: true
+  - candidate_id: layernorm.exact.high.v1
+    enabled: true
+  - candidate_id: layernorm.newton.low_iter.v1
+    enabled: true
+  - candidate_id: layernorm.centered.mid_cost.v1
+    enabled: true
+  - candidate_id: layernorm.affine.low_cost.v1
+    enabled: true
+  - candidate_id: softmax.base
+    enabled: true
+  - candidate_id: softmax.exact.high.v1
+    enabled: true
+  - candidate_id: softmax.clipped.stable.v1
+    enabled: true
+  - candidate_id: softmax.poly_exp.degree2.v1
+    enabled: true
+  - candidate_id: softmax.power.degree2.v1
+    enabled: true

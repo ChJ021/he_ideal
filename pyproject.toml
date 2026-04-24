@@ -1,0 +1,46 @@
+[project]
+name = "hetuned-llm"
+version = "0.1.0"
+description = "HETune-LLM MVP: layer-wise approximation scheduling for HE-friendly Transformer inference"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "datasets>=2.19",
+    "evaluate>=0.4",
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "protobuf>=5.0",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "rich>=13.7",
+    "scikit-learn>=1.4",
+    "seaborn>=0.13",
+    "sentencepiece>=0.2",
+    "torch>=2.2",
+    "tqdm>=4.66",
+    "transformers>=4.41,<5",
+    "typer>=0.12",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+]
+
+[project.scripts]
+hetune = "hetune.cli:app"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hetune"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

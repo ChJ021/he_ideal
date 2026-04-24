@@ -1,0 +1,13 @@
+diagnostic,accuracy,accuracy_drop,logit_kl,label_flip_rate,downgraded_operator_count,operator_ids
+baseline_high,0.9921875,0.0,0.0,0.0,0,
+layer_0_low,0.9921875,0.0,0.0004039507475681603,0.0,1,distilbert_sst2.layer0.softmax.attention_softmax
+layer_1_low,0.9921875,0.0,0.0036608020309358835,0.0,1,distilbert_sst2.layer1.softmax.attention_softmax
+layer_2_low,0.9921875,0.0,0.0018265941180288792,0.0,1,distilbert_sst2.layer2.softmax.attention_softmax
+layer_3_low,0.9921875,0.0,0.003423500107601285,0.0,1,distilbert_sst2.layer3.softmax.attention_softmax
+layer_4_low,0.9921875,0.0,0.0021927247289568186,0.0,1,distilbert_sst2.layer4.softmax.attention_softmax
+layer_5_low,0.98828125,0.00390625,0.0016523351659998298,0.00390625,1,distilbert_sst2.layer5.softmax.attention_softmax
+layers_0_1_low,0.9921875,0.0,0.003535277908667922,0.0,2,distilbert_sst2.layer0.softmax.attention_softmax;distilbert_sst2.layer1.softmax.attention_softmax
+layers_1_2_low,0.9921875,0.0,0.005207253620028496,0.0,2,distilbert_sst2.layer1.softmax.attention_softmax;distilbert_sst2.layer2.softmax.attention_softmax
+layers_2_3_low,0.9921875,0.0,0.00554059399291873,0.0,2,distilbert_sst2.layer2.softmax.attention_softmax;distilbert_sst2.layer3.softmax.attention_softmax
+layers_3_4_low,0.9921875,0.0,0.0055847689509391785,0.0,2,distilbert_sst2.layer3.softmax.attention_softmax;distilbert_sst2.layer4.softmax.attention_softmax
+layers_4_5_low,0.9921875,0.0,0.0011655609123408794,0.0,2,distilbert_sst2.layer4.softmax.attention_softmax;distilbert_sst2.layer5.softmax.attention_softmax
