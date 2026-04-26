@@ -1,0 +1,22 @@
+backend: openfhe_external
+backend_id: openfhe_local
+openfhe_root: /home/cj/github/openfhe
+source_dir: /home/cj/github/openfhe/src
+build_dir: /home/cj/github/openfhe/build
+install_dir: /home/cj/github/openfhe/install
+python_dir: /home/cj/github/openfhe/openfhe-python
+runner_path: ../../build/openfhe_runner/hetune_openfhe_runner
+ckks:
+  security_bits: 128
+  poly_modulus_degree: 16384 # 32768
+  scaling_mod_size: 59
+  first_mod_size: 60
+  multiplicative_depth: 30 # 60
+  bootstrapping_supported: true
+  default_scale_bits: 40
+notes: >
+  OpenFHE is intentionally kept outside this repository. Only third-party
+  OpenFHE files live under /home/cj/github/openfhe; the HETune native runner
+  is built inside this repository under build/openfhe_runner.
+
+# 32768 + 59 + 60 造成巨大的内存占用，暂时调低便于测试

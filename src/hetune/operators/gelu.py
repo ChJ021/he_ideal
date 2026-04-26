@@ -93,6 +93,7 @@ def gelu_providers() -> list[GeluProvider]:
                 degree=5,
                 valid_input_range=(-4.0, 4.0),
                 depth=3,
+                supports_ckks_backend=True,
                 expected_accuracy_risk=0.01,
                 cost_hint=CostVector(latency_ms=2.5, ct_ct_mults=3, ct_pt_mults=4, depth=3, rescale_count=3),
             )
@@ -106,6 +107,7 @@ def gelu_providers() -> list[GeluProvider]:
                 degree=3,
                 valid_input_range=(-3.0, 3.0),
                 depth=2,
+                supports_ckks_backend=True,
                 expected_accuracy_risk=0.03,
                 cost_hint=CostVector(latency_ms=1.5, ct_ct_mults=2, ct_pt_mults=3, depth=2, rescale_count=2),
             )
@@ -119,6 +121,7 @@ def gelu_providers() -> list[GeluProvider]:
                 degree=2,
                 valid_input_range=(-2.5, 2.5),
                 depth=1,
+                supports_ckks_backend=True,
                 expected_accuracy_risk=0.08,
                 cost_hint=CostVector(latency_ms=0.8, ct_ct_mults=1, ct_pt_mults=2, depth=1, rescale_count=1),
             )

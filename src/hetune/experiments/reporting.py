@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -31,6 +32,7 @@ def write_report(
     distillation_summary_path: str | Path | None = None,
     distillation_report_path: str | Path | None = None,
     distillation_overrides_path: str | Path | None = None,
+    he_summary: dict[str, Any] | None = None,
     operator_scope: str | None = None,
     operator_types: list[str] | None = None,
 ) -> None:
@@ -43,6 +45,7 @@ def write_report(
         calibration_stats_path,
         calibration_coverage,
     )
+    he_summary_block = _he_summary(he_summary)
     distillation_summary = _distillation_summary(
         distillation_summary_path,
         distillation_report_path,
@@ -74,6 +77,10 @@ def write_report(
         "Calibration stats:",
         "",
         calibration_summary,
+        "",
+        "HE deployment:",
+        "",
+        he_summary_block,
         "",
         "Distillation:",
         "",
@@ -269,4 +276,51 @@ def _distillation_summary(
             lines.append(f"- Generated accuracy: `{generated_accuracy:.6f}`")
         if distilled_accuracy is not None:
             lines.append(f"- Distilled accuracy: `{distilled_accuracy:.6f}`")
+    return "\n".join(lines)
+
+
+def _he_summary(summary: dict[str, Any] | None) -> str:
+    if not summary:
+        return "- Status: `not_enabled`"
+    lines = [
+        f"- HE-aware tuning: `{summary.get('he_aware', False)}`",
+        f"- Feasible: `{summary.get('he_feasible', False)}`",
+    ]
+    if "ckks_param_id" in summary:
+        lines.append(f"- CKKS parameter id: `{summary['ckks_param_id']}`")
+    if "he_backend_id" in summary:
+        lines.append(f"- Backend id: `{summary['he_backend_id']}`")
+    if "profile_candidates_loaded" in summary:
+        lines.append(f"- Profile candidates loaded: `{summary['profile_candidates_loaded']}`")
+    if "used_candidates_with_profile" in summary:
+        lines.append(
+            f"- Used candidates with profile: `{summary['used_candidates_with_profile']}`"
+        )
+    if "used_candidates_missing_profile" in summary:
+        lines.append(
+            f"- Used candidates missing profile: `{summary['used_candidates_missing_profile']}`"
+        )
+    if "strict_profile_check_passed" in summary:
+        lines.append(
+            f"- Strict profile check passed: `{summary['strict_profile_check_passed']}`"
+        )
+    if "profile_coverage_rate" in summary:
+        lines.append(f"- Profile coverage rate: `{summary['profile_coverage_rate']:.6f}`")
+    if "estimated_bootstrap_count" in summary:
+        lines.append(
+            f"- Estimated bootstrap count: `{summary['estimated_bootstrap_count']}`"
+        )
+    if "unsupported_rows" in summary:
+        lines.append(f"- Unsupported rows: `{summary['unsupported_rows']}`")
+    missing_ids = summary.get("used_candidate_ids_missing_profile")
+    if missing_ids:
+        lines.append(f"- Missing profile candidate ids: `{missing_ids}`")
+    if summary.get("strict_profile_check_reason"):
+        lines.append(
+            f"- Strict profile check reason: `{summary['strict_profile_check_reason']}`"
+        )
+    if summary.get("he_first_violation_reason"):
+        lines.append(
+            f"- First violation reason: `{summary['he_first_violation_reason']}`"
+        )
     return "\n".join(lines)

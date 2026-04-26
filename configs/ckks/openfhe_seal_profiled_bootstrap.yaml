@@ -1,0 +1,30 @@
+ckks_param_id: ckks_128_profiled_bootstrap
+backend: openfhe-seal-profiled
+backend_id: openfhe_cpu
+security_bits: 128
+poly_modulus_degree: 32768
+coefficient_modulus_chain:
+  - 60
+  - 40
+  - 40
+  - 40
+  - 40
+  - 40
+  - 40
+  - 60
+available_levels: 6
+default_scale: "2^40"
+bootstrapping_supported: true
+bootstrap_cost:
+  latency_ms: 120.0
+  rotations: 24
+  ct_ct_mults: 16
+  ct_pt_mults: 12
+  rescale_count: 8
+  relin_count: 4
+  depth: 0
+  bootstrap_count: 1
+  memory_mb: 256.0
+benchmark_repetitions: 10
+benchmark_warmups: 3
+backend_profile_path: benchmarks/ckks_operator_benchmarks/example_openfhe_profile_bootstrap.csv

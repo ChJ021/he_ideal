@@ -1,0 +1,23 @@
+deployment_id: distilbert_sst2_openfhe
+experiment_config: ../experiments/distilbert_sst2_all_nonlinear_he.yaml
+he_backend_config: ../he_backend/openfhe_local.yaml
+privacy_boundary: client_embedding
+cases:
+  - high
+  - pre_distill
+  - post_distill
+sample_size: 16 # 旧的，现已不使用
+sequence_length: 128 # 改用下面encrypted开头参数
+runner_mode: openfhe_distilbert_forward
+encrypted_sample_size: 1
+encrypted_sequence_length: 16
+fail_on_plaintext_accuracy_fallback: true
+linear_kernel: bsgs_hoisted
+bsgs_baby_step: 32
+fuse_qkv: true
+packing_strategy: row_packed
+token_block_size: auto
+profile_native_stages: true
+latency_repetitions: 1
+fail_on_unavailable_backend: true
+continue_on_case_failure: true

@@ -245,6 +245,9 @@ class ExperimentPaths:
     def he_analysis_dir(self) -> Path:
         return self.run_dir() / "he_analysis"
 
+    def he_deployment_dir(self) -> Path:
+        return self.run_dir() / "he_deployment"
+
     def distillation_dir(self) -> Path:
         return self.run_dir() / "distillation"
 
@@ -268,6 +271,7 @@ class ExperimentPaths:
             self.schedule_dir(),
             self.evaluation_dir(),
             self.he_analysis_dir(),
+            self.he_deployment_dir(),
             self.distillation_dir(),
             self.figure_dir(),
             self.report_dir(),

@@ -8,7 +8,11 @@ import pandas as pd
 from hetune.core.serialization import load_yaml
 from hetune.core.serialization import save_yaml
 from hetune.core.types import CostVector, ExperimentPaths, ScheduleEntry, SchedulePlan
-from hetune.cost.profiled import PROFILE_COST_COLUMNS, ProfiledHECostModel
+from hetune.cost.profiled import (
+    PROFILE_COST_COLUMNS,
+    ProfileValidationError,
+    ProfiledHECostModel,
+)
 from hetune.experiments.artifacts import (
     write_artifacts_index,
     write_manifest,
@@ -16,6 +20,7 @@ from hetune.experiments.artifacts import (
 from hetune.experiments.config import load_experiment_config
 from hetune.experiments.runner import ExperimentRunner
 from hetune.operators.registry import build_default_registry
+from hetune.scheduling.he_planner import analyze_schedule_feasibility, build_bootstrap_plan
 from hetune.utils.paths import resolve_path
 
 
@@ -46,6 +51,8 @@ class HEAnalysisRunner:
             ckks_param_id=self.loaded.ckks.get("ckks_param_id", "static_ckks_128"),
             backend_id=self.loaded.ckks.get("backend_id") or self.loaded.ckks.get("backend"),
             weights=self.loaded.experiment.get("cost_weights", {}),
+            profile_required=self._profile_required(),
+            profile_min_coverage=self._profile_min_coverage(),
         )
         schedule_paths = self._schedule_paths()
         if not schedule_paths:
@@ -59,11 +66,16 @@ class HEAnalysisRunner:
 
         for schedule_name, schedule_path in schedule_paths.items():
             schedule = SchedulePlan.from_dict(load_yaml(schedule_path))
-            entry_rows, total = self._breakdown_rows(schedule_name, schedule, cost_model)
-            breakdown_rows.extend(entry_rows)
-            bootstrap_rows.extend(
-                build_bootstrap_plan(schedule_name, schedule, entry_rows, self.loaded.ckks)
+            analysis = analyze_schedule_feasibility(
+                schedule_name,
+                schedule,
+                cost_model,
+                self.loaded.ckks,
             )
+            coverage = cost_model.coverage_for_schedule(schedule)
+            breakdown_rows.extend(analysis.breakdown_rows)
+            bootstrap_rows.extend(analysis.bootstrap_rows)
+            entry_rows = analysis.breakdown_rows
             profile_entries = sum(1 for row in entry_rows if row["cost_source"] == "profile")
             fallback_entries = len(entry_rows) - profile_entries
             metrics_rows.append(
@@ -72,11 +84,20 @@ class HEAnalysisRunner:
                     "entries": len(entry_rows),
                     "profile_entries": profile_entries,
                     "static_fallback_entries": fallback_entries,
-                    "profile_coverage_rate": (
-                        profile_entries / len(entry_rows) if entry_rows else 0.0
+                    "profile_coverage_rate": coverage.profile_coverage_rate,
+                    "schedule_feasible": analysis.feasible,
+                    "unsupported_rows": analysis.unsupported_count,
+                    "estimated_bootstrap_count": analysis.estimated_bootstrap_count,
+                    "profile_candidates_loaded": cost_model.load_summary.profile_candidates_loaded,
+                    "used_candidates_with_profile": coverage.used_candidates_with_profile,
+                    "used_candidates_missing_profile": coverage.used_candidates_missing_profile,
+                    "used_candidate_ids_missing_profile": ",".join(
+                        coverage.used_candidate_ids_missing_profile
                     ),
-                    **total.to_dict(),
-                    "weighted_cost": total.weighted(cost_model.weights),
+                    "strict_profile_check_passed": coverage.strict_profile_check_passed,
+                    "strict_profile_check_reason": coverage.strict_profile_check_reason or "",
+                    **analysis.total_cost.to_dict(),
+                    "weighted_cost": analysis.total_cost.weighted(cost_model.weights),
                 }
             )
 
@@ -133,44 +154,19 @@ class HEAnalysisRunner:
             self.operator_scope,
             self.operator_types,
         )
+        final_row = metrics[metrics["schedule"] == "hetune_generated"]
+        if (
+            self._profile_required()
+            and not final_row.empty
+            and not bool(final_row.iloc[0]["strict_profile_check_passed"])
+        ):
+            reason = str(final_row.iloc[0].get("strict_profile_check_reason", "")) or "unknown"
+            missing = str(final_row.iloc[0].get("used_candidate_ids_missing_profile", ""))
+            raise ProfileValidationError(
+                "Strict HE profile validation failed for hetune_generated: "
+                f"{reason}; missing_profile_candidates={missing or 'none'}"
+            )
         return metrics_path
-
-    def _breakdown_rows(
-        self,
-        schedule_name: str,
-        schedule: SchedulePlan,
-        cost_model: ProfiledHECostModel,
-    ) -> tuple[list[dict[str, Any]], CostVector]:
-        rows: list[dict[str, Any]] = []
-        total = CostVector()
-        for order, entry in enumerate(schedule.entries):
-            cost, source = cost_model.estimate_with_source(
-                entry.operator_key,
-                entry.candidate_id,
-                entry.ckks_param_id,
-            )
-            total += cost
-            rows.append(
-                {
-                    "schedule": schedule_name,
-                    "entry_order": order,
-                    "operator_id": entry.operator_key.id,
-                    "layer_index": entry.operator_key.layer_index,
-                    "operator_type": entry.operator_key.operator_type,
-                    "operator_name": entry.operator_key.name,
-                    "candidate_id": entry.candidate_id,
-                    "ckks_param_id": entry.ckks_param_id,
-                    "scale_id": entry.scale_id,
-                    "level_budget": entry.level_budget,
-                    "bootstrap_policy": entry.bootstrap_policy,
-                    "layout_id": entry.layout_id,
-                    "cost_source": source,
-                    **cost.to_dict(),
-                    "level_cost": max(cost.depth, cost.rescale_count),
-                    "weighted_cost": cost.weighted(cost_model.weights),
-                }
-            )
-        return rows, total
 
     def _schedule_paths(self) -> dict[str, Path]:
         candidates = {
@@ -240,6 +236,15 @@ class HEAnalysisRunner:
             return None
         return resolve_path(profile, self.loaded.root)
 
+    def _profile_required(self) -> bool:
+        return bool(self.loaded.experiment.get("scheduler", {}).get("profile_required", False))
+
+    def _profile_min_coverage(self) -> float:
+        scheduler = self.loaded.experiment.get("scheduler", {})
+        if "profile_min_coverage" in scheduler:
+            return float(scheduler["profile_min_coverage"])
+        return 1.0 if self._profile_required() else 0.0
+
     @staticmethod
     def _enabled_candidates(config: dict[str, Any]) -> set[str]:
         candidates = config.get("candidates", [])
@@ -275,107 +280,6 @@ def build_profile_coverage(breakdown: pd.DataFrame) -> pd.DataFrame:
     return grouped
 
 
-def build_bootstrap_plan(
-    schedule_name: str,
-    schedule: SchedulePlan,
-    breakdown_rows: list[dict[str, Any]],
-    ckks_config: dict[str, Any],
-) -> list[dict[str, Any]]:
-    available_levels = int(
-        ckks_config.get(
-            "available_levels",
-            max(len(ckks_config.get("coefficient_modulus_chain", [])) - 2, 0),
-        )
-    )
-    bootstrapping_supported = bool(ckks_config.get("bootstrapping_supported", False))
-    if available_levels <= 0:
-        return [
-            {
-                "schedule": schedule_name,
-                "segment_index": 0,
-                "required": False,
-                "status": "not_evaluated",
-                "reason": "available_levels_not_configured",
-                "available_levels": available_levels,
-                "bootstrap_supported": bootstrapping_supported,
-                "bootstrap_before_operator_id": "",
-                "layer_index": "",
-                "operator_type": "",
-                "candidate_id": "",
-                "levels_used_before": 0,
-                "operator_level_cost": 0,
-            }
-        ]
-
-    rows: list[dict[str, Any]] = []
-    segment_index = 0
-    levels_used = 0
-    for entry, cost_row in zip(schedule.entries, breakdown_rows, strict=True):
-        level_cost = int(cost_row["level_cost"])
-        if level_cost > available_levels:
-            rows.append(
-                {
-                    "schedule": schedule_name,
-                    "segment_index": segment_index,
-                    "required": True,
-                    "status": "unsupported",
-                    "reason": "single_operator_exceeds_available_levels",
-                    "available_levels": available_levels,
-                    "bootstrap_supported": bootstrapping_supported,
-                    "bootstrap_before_operator_id": entry.operator_key.id,
-                    "layer_index": entry.operator_key.layer_index,
-                    "operator_type": entry.operator_key.operator_type,
-                    "candidate_id": entry.candidate_id,
-                    "levels_used_before": levels_used,
-                    "operator_level_cost": level_cost,
-                }
-            )
-            segment_index += 1
-            levels_used = 0
-            continue
-        if levels_used and levels_used + level_cost > available_levels:
-            rows.append(
-                {
-                    "schedule": schedule_name,
-                    "segment_index": segment_index,
-                    "required": True,
-                    "status": "supported" if bootstrapping_supported else "unsupported",
-                    "reason": "level_budget_exceeded",
-                    "available_levels": available_levels,
-                    "bootstrap_supported": bootstrapping_supported,
-                    "bootstrap_before_operator_id": entry.operator_key.id,
-                    "layer_index": entry.operator_key.layer_index,
-                    "operator_type": entry.operator_key.operator_type,
-                    "candidate_id": entry.candidate_id,
-                    "levels_used_before": levels_used,
-                    "operator_level_cost": level_cost,
-                }
-            )
-            segment_index += 1
-            levels_used = 0
-        levels_used += level_cost
-
-    if not rows:
-        rows.append(
-            {
-                "schedule": schedule_name,
-                "segment_index": 0,
-                "required": False,
-                "status": "no_bootstrap_required",
-                "reason": "within_level_budget",
-                "available_levels": available_levels,
-                "bootstrap_supported": bootstrapping_supported,
-                "bootstrap_before_operator_id": "",
-                "layer_index": "",
-                "operator_type": "",
-                "candidate_id": "",
-                "levels_used_before": levels_used,
-                "operator_level_cost": 0,
-            }
-        )
-    return rows
-
-
 def write_he_cost_figure(
     metrics: pd.DataFrame,
     weights: dict[str, float],
@@ -409,6 +313,17 @@ def write_he_report(
     bootstrap: pd.DataFrame,
     figure_path: Path,
 ) -> None:
+    feasible = metrics[metrics["schedule_feasible"].astype(bool)] if "schedule_feasible" in metrics.columns else pd.DataFrame()
+    infeasible = metrics[~metrics["schedule_feasible"].astype(bool)] if "schedule_feasible" in metrics.columns else pd.DataFrame()
+    unsupported_total = int(bootstrap["status"].eq("unsupported").sum()) if not bootstrap.empty and "status" in bootstrap.columns else 0
+    single_operator_infeasible = sorted(
+        set(
+            bootstrap.loc[
+                bootstrap["reason"] == "single_operator_exceeds_available_levels",
+                "candidate_id",
+            ].astype(str)
+        )
+    ) if not bootstrap.empty and "reason" in bootstrap.columns else []
     lines = [
         f"# HE Analysis Report: {experiment_id}",
         "",
@@ -416,8 +331,13 @@ def write_he_report(
         f"- Backend id: `{ckks_config.get('backend_id', ckks_config.get('backend', 'unknown'))}`",
         f"- CKKS parameter id: `{ckks_config.get('ckks_param_id', 'unknown')}`",
         f"- Profile path: `{cost_model.profile_path or 'none'}`",
-        f"- Profile candidates loaded: `{len(cost_model.profile_costs)}`",
+        f"- Profile candidates loaded: `{cost_model.load_summary.profile_candidates_loaded}`",
+        f"- Strict profile required: `{cost_model.profile_required}`",
         f"- Figure: `{figure_path}`",
+        f"- Feasible schedules: `{', '.join(feasible['schedule'].tolist()) if not feasible.empty else 'none'}`",
+        f"- Infeasible schedules: `{', '.join(infeasible['schedule'].tolist()) if not infeasible.empty else 'none'}`",
+        f"- Unsupported rows: `{unsupported_total}`",
+        f"- Single-operator infeasible candidates: `{', '.join(single_operator_infeasible) if single_operator_infeasible else 'none'}`",
         "",
         "## Schedule HE Metrics",
         "",
@@ -436,7 +356,9 @@ def write_he_report(
         "- `profile` means the candidate cost came from imported OpenFHE/SEAL microbenchmark data.",
         "- `static_fallback` means the candidate used built-in static CKKS-style metadata.",
         "- `base` is the plaintext reference schedule and is not a deployable HE schedule.",
-        "- Unsupported bootstrap rows indicate the schedule exceeds the configured level budget while bootstrapping is disabled.",
+        "- `strict_profile_check_passed` is the gate for reporting a deployable HE conclusion.",
+        "- `schedule_feasible = true` means the schedule fits the configured level budget with modeled bootstrap placement.",
+        "- Unsupported rows indicate the schedule exceeds the configured level budget or contains a single operator that cannot fit in the configured levels.",
     ]
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)

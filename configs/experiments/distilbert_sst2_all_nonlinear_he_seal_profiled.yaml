@@ -1,0 +1,67 @@
+experiment_id: distilbert_sst2_all_nonlinear_he_seal_profiled
+operator_scope: all_nonlinear
+operator_types:
+  - gelu
+  - layernorm
+  - softmax
+model_config: ../models/distilbert_sst2.yaml
+dataset_config: ../datasets/sst2.yaml
+approximation_config: ../approximations/mvp_candidates.yaml
+ckks_config: ../ckks/seal_profiled.yaml
+output_root: outputs
+device: cuda
+sequence_length: 128
+batch_size: 16
+calibration_size: 256
+validation_size: 256
+accuracy_tolerance: 0.02
+max_batches:
+scheduler:
+  policy: validated_greedy
+  he_aware: true
+  profile_required: true
+  profile_min_coverage: 1.0
+  max_logit_kl: 0.02
+  max_label_flip_rate: 0.01
+  max_downgrades_per_layer: 2
+  max_bootstrap_count:
+  protected_operator_types: []
+  min_quality_rank_by_operator_type:
+    layernorm: 45
+    softmax: 35
+run_combination_diagnostics: true
+combination_diagnostic_quality: low
+cost_weights:
+  latency_ms: 1.0
+  rotations: 0.05
+  ct_ct_mults: 1.0
+  ct_pt_mults: 0.15
+  rescale_count: 0.4
+  relin_count: 0.4
+  depth: 1.5
+  bootstrap_count: 50.0
+  memory_mb: 0.01
+baselines:
+  - uniform_low
+  - uniform_mid
+  - uniform_high
+  - hetune_greedy
+distillation:
+  enabled: true
+  schedule_name: hetune_generated
+  train_split: train
+  train_size: 2000
+  val_size: 512
+  epochs: 2
+  lr: 5.0e-5
+  batch_size: 16
+  temperature: 2.0
+  alpha_kl: 0.7
+  alpha_ce: 0.3
+  alpha_hidden: 1.0
+  weight_decay: 0.0
+  patience: 1
+  target_operator_types:
+    - layernorm
+  target_operator_names:
+    - ffn_layernorm

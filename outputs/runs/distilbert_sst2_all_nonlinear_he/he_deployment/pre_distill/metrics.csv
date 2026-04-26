@@ -1,0 +1,2 @@
+case,schedule,feasible,accuracy,accuracy_source,runner_mode,sample_count,latency_ms,latency_p50_ms,latency_p95_ms,predictions_path,logits_path,error,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb
+pre_distill,hetune_generated,False,,,,0,,,,,,OpenFHE runner failed for pre_distill: ,0,0,0,0,0,0,0,0.0

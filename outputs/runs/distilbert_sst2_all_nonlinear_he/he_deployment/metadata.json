@@ -1,0 +1,39 @@
+{
+  "deployment_id": "distilbert_sst2_openfhe",
+  "experiment_id": "distilbert_sst2_all_nonlinear_he",
+  "model_id": "distilbert_sst2",
+  "model_name_or_path": "distilbert-base-uncased-finetuned-sst-2-english",
+  "dataset_id": "sst2",
+  "sequence_length": 128,
+  "sample_size": 16,
+  "latency_repetitions": 1,
+  "deployment_config_path": "/home/cj/he_ideal/hetuned_llm/configs/deployment/distilbert_sst2_openfhe.yaml",
+  "experiment_config_path": "/home/cj/he_ideal/hetuned_llm/configs/deployment/../experiments/distilbert_sst2_all_nonlinear_he.yaml",
+  "backend_config_path": "/home/cj/he_ideal/hetuned_llm/configs/deployment/../he_backend/openfhe_local.yaml",
+  "backend": {
+    "backend": "openfhe_external",
+    "backend_id": "openfhe_local",
+    "openfhe_root": "/home/cj/github/openfhe",
+    "source_dir": "/home/cj/github/openfhe/src",
+    "build_dir": "/home/cj/github/openfhe/build",
+    "install_dir": "/home/cj/github/openfhe/install",
+    "python_dir": "/home/cj/github/openfhe/openfhe-python",
+    "runner_path": "/home/cj/he_ideal/hetuned_llm/build/openfhe_runner/hetune_openfhe_runner",
+    "config_path": "/home/cj/he_ideal/hetuned_llm/configs/deployment/../he_backend/openfhe_local.yaml"
+  },
+  "backend_availability": {
+    "available": true,
+    "reason": "available",
+    "checked_paths": {
+      "openfhe_root": "/home/cj/github/openfhe",
+      "source_dir": "/home/cj/github/openfhe/src",
+      "build_dir": "/home/cj/github/openfhe/build",
+      "install_dir": "/home/cj/github/openfhe/install",
+      "python_dir": "/home/cj/github/openfhe/openfhe-python",
+      "runner_path": "/home/cj/he_ideal/hetuned_llm/build/openfhe_runner/hetune_openfhe_runner"
+    }
+  },
+  "runner_mode": "openfhe_distilbert_forward",
+  "encrypted_sequence_length": 16,
+  "encrypted_sample_size": 1
+}

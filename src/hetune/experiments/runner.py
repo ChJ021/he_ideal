@@ -8,6 +8,7 @@ import pandas as pd
 from hetune.core.ids import OperatorKey
 from hetune.core.serialization import load_yaml, save_yaml
 from hetune.core.types import ExperimentPaths, SchedulePlan, SensitivityRecord
+from hetune.cost.profiled import ProfiledHECostModel
 from hetune.cost.static import StaticCostModel
 from hetune.execution.evaluator import PlaintextEvaluator
 from hetune.experiments.artifacts import (
@@ -32,10 +33,13 @@ from hetune.profiling.profiler import SensitivityProfiler
 from hetune.scheduling.policies import (
     BasePolicy,
     GreedyDowngradePolicy,
+    HEUniformPolicy,
     UniformPolicy,
     ValidatedGreedyDowngradePolicy,
 )
+from hetune.scheduling.he_planner import analyze_schedule_feasibility
 from hetune.security.validators import SecurityValidator
+from hetune.utils.paths import resolve_path
 
 
 class ExperimentRunner:
@@ -132,6 +136,7 @@ class ExperimentRunner:
             "operator_types": self.operator_types,
         }
         ckks_param_id = self.loaded.ckks.get("ckks_param_id", "static_ckks_128")
+        cost_model = self._build_cost_model(registry)
         base_schedule = BasePolicy(registry, ckks_param_id).generate(
             adapter.operators,
             metadata=metadata,
@@ -141,12 +146,57 @@ class ExperimentRunner:
             base_schedule.to_dict(),
             self.paths.schedule_dir() / "base_reference.yaml",
         )
-        for quality in ("low", "mid", "high"):
-            schedule = UniformPolicy(registry, ckks_param_id, quality).generate(
+        if self._is_he_aware():
+            constraints.update(
+                {
+                    "he_aware": True,
+                    "available_levels": self.loaded.ckks.get("available_levels"),
+                    "bootstrapping_supported": bool(
+                        self.loaded.ckks.get("bootstrapping_supported", False)
+                    ),
+                    "max_bootstrap_count": scheduler_cfg.get("max_bootstrap_count"),
+                }
+            )
+        initial_schedule = (
+            HEUniformPolicy(
+                registry=registry,
+                cost_model=cost_model,
+                ckks_config=self.loaded.ckks,
+                ckks_param_id=ckks_param_id,
+                quality="high",
+            ).generate(
                 adapter.operators,
                 metadata=metadata,
                 constraints=constraints,
             )
+            if self._is_he_aware()
+            else None
+        )
+        if initial_schedule is not None:
+            initial_schedule = self._annotate_schedule_for_he(
+                initial_schedule,
+                cost_model,
+            ).schedule
+        for quality in ("low", "mid", "high"):
+            if self._is_he_aware():
+                schedule = HEUniformPolicy(
+                    registry=registry,
+                    cost_model=cost_model,
+                    ckks_config=self.loaded.ckks,
+                    ckks_param_id=ckks_param_id,
+                    quality=quality,
+                ).generate(
+                    adapter.operators,
+                    metadata=metadata,
+                    constraints=constraints,
+                )
+                schedule = self._annotate_schedule_for_he(schedule, cost_model).schedule
+            else:
+                schedule = UniformPolicy(registry, ckks_param_id, quality).generate(
+                    adapter.operators,
+                    metadata=metadata,
+                    constraints=constraints,
+                )
             save_yaml(
                 schedule.to_dict(),
                 self.paths.schedule_dir() / f"uniform_{quality}.yaml",
@@ -154,15 +204,21 @@ class ExperimentRunner:
 
         additive_greedy = GreedyDowngradePolicy(
             registry=registry,
-            cost_model=self._build_cost_model(registry),
+            cost_model=cost_model,
             max_accuracy_drop=max_accuracy_drop,
             ckks_param_id=ckks_param_id,
+            initial_schedule=initial_schedule,
         ).generate(
             adapter.operators,
             sensitivity_records=records,
             metadata=metadata,
             constraints=constraints,
         )
+        if self._is_he_aware():
+            additive_greedy = self._annotate_schedule_for_he(
+                additive_greedy,
+                cost_model,
+            ).schedule
         save_yaml(
             additive_greedy.to_dict(),
             self.paths.schedule_dir() / "hetune_additive_greedy.yaml",
@@ -185,9 +241,10 @@ class ExperimentRunner:
 
         validated = ValidatedGreedyDowngradePolicy(
             registry=registry,
-            cost_model=self._build_cost_model(registry),
+            cost_model=cost_model,
             evaluate_schedule=evaluate_schedule,
             baseline_schedule=base_schedule,
+            initial_schedule=initial_schedule,
             max_accuracy_drop=max_accuracy_drop,
             max_logit_kl=float(scheduler_cfg.get("max_logit_kl", 0.02)),
             max_label_flip_rate=float(scheduler_cfg.get("max_label_flip_rate", 0.01)),
@@ -200,6 +257,9 @@ class ExperimentRunner:
                 {"layernorm": 45},
             ),
             ckks_param_id=ckks_param_id,
+            schedule_constraint_checker=self._he_schedule_constraint_checker(cost_model)
+            if self._is_he_aware()
+            else None,
         ).generate(
             adapter.operators,
             sensitivity_records=records,
@@ -215,9 +275,15 @@ class ExperimentRunner:
         findings = SecurityValidator().validate(validated.schedule)
         if findings:
             raise ValueError(f"Generated schedule failed validation: {findings}")
+        final_schedule = validated.schedule
+        if self._is_he_aware():
+            final_schedule = self._annotate_schedule_for_he(
+                final_schedule,
+                cost_model,
+            ).schedule
         output = self.paths.schedule_dir() / "hetune_generated.yaml"
-        save_yaml(validated.schedule.to_dict(), output)
-        self._write_selection_summary(validated.schedule, registry)
+        save_yaml(final_schedule.to_dict(), output)
+        self._write_selection_summary(final_schedule, registry)
         return output
 
     def evaluate(self) -> Path:
@@ -230,7 +296,8 @@ class ExperimentRunner:
         schedule = SchedulePlan.from_dict(load_yaml(schedule_path))
         result = evaluator.run(dataset, schedule=schedule)
         cost_model = self._build_cost_model(registry)
-        total_cost = cost_model.estimate_schedule(schedule)
+        he_result = self._annotate_schedule_for_he(schedule, cost_model) if self._is_he_aware() else None
+        total_cost = he_result.total_cost if he_result is not None else cost_model.estimate_schedule(schedule)
         distilled_payload = self._load_distillation_payload()
         rows = []
         base_path = self.paths.schedule_dir() / "base_reference.yaml"
@@ -246,11 +313,13 @@ class ExperimentRunner:
             save_yaml(base_schedule.to_dict(), base_path)
         base_schedule = SchedulePlan.from_dict(load_yaml(base_path))
         base_result = evaluator.run(dataset, schedule=base_schedule)
-        base_cost = cost_model.estimate_schedule(base_schedule)
+        base_he_result = self._annotate_schedule_for_he(base_schedule, cost_model) if self._is_he_aware() else None
+        base_cost = base_he_result.total_cost if base_he_result is not None else cost_model.estimate_schedule(base_schedule)
         rows.append(
             {
                 "schedule": "base",
                 "accuracy": base_result.accuracy,
+                **self._schedule_profile_summary(cost_model, base_schedule),
                 **base_cost.to_dict(),
             }
         )
@@ -258,6 +327,7 @@ class ExperimentRunner:
             {
                 "schedule": "hetune_generated",
                 "accuracy": result.accuracy,
+                **self._schedule_profile_summary(cost_model, schedule),
                 **total_cost.to_dict(),
             }
         )
@@ -271,6 +341,7 @@ class ExperimentRunner:
                 {
                     "schedule": "hetune_generated_distilled",
                     "accuracy": distilled_result.accuracy,
+                    **self._schedule_profile_summary(cost_model, schedule),
                     **total_cost.to_dict(),
                 }
             )
@@ -280,11 +351,13 @@ class ExperimentRunner:
                 continue
             baseline = SchedulePlan.from_dict(load_yaml(baseline_path))
             baseline_result = evaluator.run(dataset, schedule=baseline)
-            baseline_cost = cost_model.estimate_schedule(baseline)
+            baseline_he_result = self._annotate_schedule_for_he(baseline, cost_model) if self._is_he_aware() else None
+            baseline_cost = baseline_he_result.total_cost if baseline_he_result is not None else cost_model.estimate_schedule(baseline)
             rows.append(
                 {
                     "schedule": f"uniform_{quality}",
                     "accuracy": baseline_result.accuracy,
+                    **self._schedule_profile_summary(cost_model, baseline),
                     **baseline_cost.to_dict(),
                 }
             )
@@ -307,6 +380,7 @@ class ExperimentRunner:
             distillation_summary_path=self.paths.distillation_dir() / "summary.csv",
             distillation_report_path=self.paths.distillation_dir() / "report.md",
             distillation_overrides_path=self.paths.distillation_dir() / "overrides.pt",
+            he_summary=self._he_summary_from_result(he_result, cost_model, schedule),
             operator_scope=self.operator_scope,
             operator_types=self.operator_types,
         )
@@ -323,7 +397,7 @@ class ExperimentRunner:
         split_key: str,
     ) -> tuple[HFSequenceClassifierAdapter, ApproximationRegistry, PlaintextEvaluator]:
         enabled_ids = self._enabled_candidates(self.loaded.approximations)
-        registry = build_default_registry(enabled_ids)
+        registry = build_default_registry(enabled_ids, ckks_only=self._is_he_aware())
         model_cfg = self.loaded.model
         adapter = HFSequenceClassifierAdapter(
             model_id=model_cfg["model_id"],
@@ -388,7 +462,17 @@ class ExperimentRunner:
             max_length=int(self.loaded.experiment.get("sequence_length", 128)),
         )
 
-    def _build_cost_model(self, registry: ApproximationRegistry) -> StaticCostModel:
+    def _build_cost_model(self, registry: ApproximationRegistry) -> Any:
+        if self._is_he_aware():
+            return ProfiledHECostModel(
+                registry=registry,
+                profile_path=self._profile_path(),
+                ckks_param_id=self.loaded.ckks.get("ckks_param_id", "static_ckks_128"),
+                backend_id=self.loaded.ckks.get("backend_id") or self.loaded.ckks.get("backend"),
+                weights=self.loaded.experiment.get("cost_weights", {}),
+                profile_required=self._profile_required(),
+                profile_min_coverage=self._profile_min_coverage(),
+            )
         return StaticCostModel(
             registry=registry,
             ckks_param_id=self.loaded.ckks.get("ckks_param_id", "static_ckks_128"),
@@ -404,6 +488,11 @@ class ExperimentRunner:
         rows = []
         for entry in schedule.entries:
             cost = cost_model.estimate(entry.operator_key, entry.candidate_id)
+            cost_source = (
+                cost_model.source_for(entry.candidate_id)
+                if hasattr(cost_model, "source_for")
+                else "static_fallback"
+            )
             rows.append(
                 {
                     "operator_id": entry.operator_key.id,
@@ -411,6 +500,10 @@ class ExperimentRunner:
                     "operator_type": entry.operator_key.operator_type,
                     "operator_name": entry.operator_key.name,
                     "candidate_id": entry.candidate_id,
+                    "ckks_param_id": entry.ckks_param_id,
+                    "level_budget": entry.level_budget,
+                    "bootstrap_policy": entry.bootstrap_policy,
+                    "cost_source": cost_source,
                     **cost.to_dict(),
                 }
             )
@@ -428,10 +521,102 @@ class ExperimentRunner:
             "model_id": self.loaded.model["model_id"],
             "dataset_id": self.loaded.dataset["dataset_id"],
             "sequence_length_bucket": self.loaded.experiment.get("sequence_length", 128),
-            "backend_id": "plaintext_sim",
+            "backend_id": self.loaded.ckks.get("backend_id", "plaintext_sim")
+            if self._is_he_aware()
+            else "plaintext_sim",
             "security_level": self.loaded.ckks.get("security_bits", 128),
             "operator_scope": self.operator_scope,
             "operator_types": self.operator_types,
+        }
+
+    def _profile_required(self) -> bool:
+        return bool(self.loaded.experiment.get("scheduler", {}).get("profile_required", False))
+
+    def _profile_min_coverage(self) -> float:
+        scheduler = self.loaded.experiment.get("scheduler", {})
+        if "profile_min_coverage" in scheduler:
+            return float(scheduler["profile_min_coverage"])
+        return 1.0 if self._profile_required() else 0.0
+
+    def _is_he_aware(self) -> bool:
+        return bool(self.loaded.experiment.get("scheduler", {}).get("he_aware", False))
+
+    def _profile_path(self) -> Path | None:
+        if self.loaded.ckks.get("backend") == "static-only":
+            return None
+        profile = self.loaded.ckks.get("backend_profile_path")
+        if not profile:
+            return None
+        return resolve_path(profile, self.loaded.root)
+
+    def _annotate_schedule_for_he(
+        self,
+        schedule: SchedulePlan,
+        cost_model: Any,
+    ):
+        return analyze_schedule_feasibility(
+            schedule.metadata.get("policy", "schedule"),
+            schedule,
+            cost_model,
+            self.loaded.ckks,
+        )
+
+    def _he_schedule_constraint_checker(self, cost_model: Any):
+        def check(schedule: SchedulePlan) -> str | None:
+            result = self._annotate_schedule_for_he(schedule, cost_model)
+            max_bootstrap_count = self.loaded.experiment.get("scheduler", {}).get(
+                "max_bootstrap_count"
+            )
+            if max_bootstrap_count is not None and result.estimated_bootstrap_count > int(
+                max_bootstrap_count
+            ):
+                return "he_exceeds_max_bootstrap_count"
+            if result.feasible:
+                return None
+            if result.first_violation_reason == "single_operator_exceeds_available_levels":
+                return "he_infeasible_single_operator"
+            if result.first_violation_reason == "level_budget_exceeded":
+                return "he_infeasible_level_budget"
+            return "he_infeasible"
+
+        return check
+
+    def _he_summary_from_result(
+        self,
+        result,
+        cost_model: Any,
+        schedule: SchedulePlan,
+    ) -> dict[str, Any] | None:
+        if result is None:
+            return None
+        summary = {
+            "he_aware": True,
+            "he_feasible": result.feasible,
+            "estimated_bootstrap_count": result.estimated_bootstrap_count,
+            "unsupported_rows": result.unsupported_count,
+            "ckks_param_id": result.schedule.metadata.get("ckks_param_id"),
+            "he_backend_id": result.schedule.metadata.get("he_backend_id"),
+        }
+        if result.first_violation_reason:
+            summary["he_first_violation_reason"] = result.first_violation_reason
+        summary.update(self._schedule_profile_summary(cost_model, schedule))
+        return summary
+
+    def _schedule_profile_summary(self, cost_model: Any, schedule: SchedulePlan) -> dict[str, Any]:
+        if not hasattr(cost_model, "coverage_for_schedule") or not hasattr(cost_model, "load_summary"):
+            return {}
+        coverage = cost_model.coverage_for_schedule(schedule)
+        missing_profile_ids = ",".join(coverage.used_candidate_ids_missing_profile)
+        return {
+            "profile_candidates_loaded": cost_model.load_summary.profile_candidates_loaded,
+            "profile_entries": coverage.profile_entries,
+            "static_fallback_entries": coverage.static_fallback_entries,
+            "profile_coverage_rate": coverage.profile_coverage_rate,
+            "used_candidates_with_profile": coverage.used_candidates_with_profile,
+            "used_candidates_missing_profile": coverage.used_candidates_missing_profile,
+            "used_candidate_ids_missing_profile": missing_profile_ids,
+            "strict_profile_check_passed": coverage.strict_profile_check_passed,
+            "strict_profile_check_reason": coverage.strict_profile_check_reason or "",
         }
 
     def _run_distillation_if_enabled(self) -> Path | None:

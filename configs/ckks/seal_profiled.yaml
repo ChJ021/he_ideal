@@ -1,0 +1,22 @@
+ckks_param_id: seal_profiled
+backend: seal-profiled
+backend_id: seal_cpu
+security_bits: 128
+poly_modulus_degree: 32768
+coefficient_modulus_chain:
+  - 60
+  - 40
+  - 40
+  - 40
+  - 40
+  - 60
+available_levels: 4
+default_scale: "2^40"
+bootstrapping_supported: false
+seal_source_path: external/SEAL
+seal_build_path: external/SEAL/build
+seal_install_path: external/SEAL/install
+seal_version: 4.1.1
+benchmark_repetitions: 10
+benchmark_warmups: 3
+backend_profile_path: benchmarks/ckks_operator_benchmarks/example_seal_profile.csv

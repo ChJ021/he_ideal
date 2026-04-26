@@ -1,0 +1,6 @@
+schedule,entries,profile_entries,static_fallback_entries,profile_coverage_rate,schedule_feasible,unsupported_rows,estimated_bootstrap_count,profile_candidates_loaded,used_candidates_with_profile,used_candidates_missing_profile,used_candidate_ids_missing_profile,strict_profile_check_passed,strict_profile_check_reason,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb,weighted_cost
+base,24,0,24,1.0,True,0,0,11,0,0,,True,,0.0,0,0,0,0,0,0,0,0.0,0.0
+hetune_generated,24,24,0,1.0,True,0,21,11,5,0,,True,,2715.966,544,455,385,281,84,113,21,5376.0,4675.1759999999995
+uniform_low,24,24,0,1.0,True,0,1,11,3,0,,True,,139.152,30,28,48,20,4,12,1,256.0,256.01199999999994
+uniform_mid,24,24,0,1.0,True,0,5,11,3,0,,True,,640.356,138,116,114,76,20,36,5,1280.0,1135.5559999999998
+uniform_high,24,24,0,1.0,True,0,23,11,3,0,,True,,2978.88,594,500,426,310,92,126,23,5888.0,5131.160000000001

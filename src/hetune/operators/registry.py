@@ -36,11 +36,18 @@ class ApproximationRegistry:
         operator_type: str,
         enabled_ids: set[str] | None = None,
         include_base: bool = False,
+        supports_ckks_backend: bool | None = None,
     ) -> list[ApproximationProvider]:
         providers = list(self._by_type.get(operator_type, []))
         if not include_base:
             providers = [
                 provider for provider in providers if not provider.candidate_id.endswith(".base")
+            ]
+        if supports_ckks_backend is not None:
+            providers = [
+                provider
+                for provider in providers
+                if provider.spec.supports_ckks_backend == supports_ckks_backend
             ]
         if enabled_ids is not None:
             providers = [provider for provider in providers if provider.candidate_id in enabled_ids]
@@ -50,13 +57,20 @@ class ApproximationRegistry:
         return list(self._providers.values())
 
 
-def build_default_registry(enabled_ids: set[str] | None = None) -> ApproximationRegistry:
+def build_default_registry(
+    enabled_ids: set[str] | None = None,
+    ckks_only: bool = False,
+) -> ApproximationRegistry:
     registry = ApproximationRegistry()
     providers: list[ApproximationProvider] = []
     providers.extend(gelu_providers())
     providers.extend(layernorm_providers())
     providers.extend(softmax_providers())
     for provider in providers:
+        if ckks_only and not (
+            provider.spec.supports_ckks_backend or provider.candidate_id.endswith(".base")
+        ):
+            continue
         if enabled_ids is None or provider.candidate_id in enabled_ids:
             registry.register(provider)
     return registry

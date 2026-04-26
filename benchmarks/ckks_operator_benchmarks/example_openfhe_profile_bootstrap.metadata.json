@@ -1,0 +1,22 @@
+{
+  "backend_id": "openfhe_cpu",
+  "benchmark_repetitions": 10,
+  "benchmark_warmups": 3,
+  "ckks_param_id": "ckks_128_profiled_bootstrap",
+  "coefficient_modulus_chain": [
+    60,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    60
+  ],
+  "default_scale": "2^40",
+  "poly_modulus_degree": 32768,
+  "seal_build_path": "",
+  "seal_install_path": "",
+  "seal_source_path": "",
+  "seal_version": "unknown"
+}

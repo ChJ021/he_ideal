@@ -8,6 +8,7 @@ from hetune.core.types import ScheduleEntry, SchedulePlan, SensitivityRecord
 from hetune.cost.static import StaticCostModel
 from hetune.operators.registry import ApproximationRegistry
 from hetune.profiling.metrics import label_flip_rate, logit_kl
+from hetune.scheduling.he_planner import available_levels, level_cost
 
 
 def _quality_sorted(registry: ApproximationRegistry, operator_type: str) -> list[str]:
@@ -108,11 +109,69 @@ class BasePolicy:
 
 
 @dataclass(slots=True)
+class HEUniformPolicy:
+    registry: ApproximationRegistry
+    cost_model: Any
+    ckks_config: dict[str, Any]
+    ckks_param_id: str = "static_ckks_128"
+    quality: str = "high"
+
+    def generate(
+        self,
+        operators: list[OperatorKey],
+        metadata: dict[str, object] | None = None,
+        constraints: dict[str, object] | None = None,
+    ) -> SchedulePlan:
+        entries: list[ScheduleEntry] = []
+        budget = available_levels(self.ckks_config)
+        for operator in operators:
+            providers = self.registry.query(
+                operator.operator_type,
+                supports_ckks_backend=True,
+            )
+            feasible = [
+                provider
+                for provider in providers
+                if level_cost(
+                    self.cost_model.estimate(
+                        operator,
+                        provider.candidate_id,
+                        self.ckks_param_id,
+                    )
+                )
+                <= budget
+            ]
+            if not feasible:
+                raise ValueError(
+                    f"No HE-feasible candidates for {operator.id} under {self.ckks_param_id}"
+                )
+            if self.quality == "low":
+                provider = feasible[-1]
+            elif self.quality == "mid":
+                provider = feasible[len(feasible) // 2]
+            else:
+                provider = feasible[0]
+            entries.append(
+                ScheduleEntry(
+                    operator_key=operator,
+                    candidate_id=provider.candidate_id,
+                    ckks_param_id=self.ckks_param_id,
+                )
+            )
+        return SchedulePlan(
+            metadata={**(metadata or {}), "policy": f"uniform_{self.quality}"},
+            entries=entries,
+            constraints=constraints or {},
+        )
+
+
+@dataclass(slots=True)
 class GreedyDowngradePolicy:
     registry: ApproximationRegistry
-    cost_model: StaticCostModel
+    cost_model: Any
     max_accuracy_drop: float = 0.01
     ckks_param_id: str = "static_ckks_128"
+    initial_schedule: SchedulePlan | None = None
 
     def generate(
         self,
@@ -123,13 +182,17 @@ class GreedyDowngradePolicy:
     ) -> SchedulePlan:
         constraints = dict(constraints or {})
         constraints.setdefault("max_accuracy_drop", self.max_accuracy_drop)
-        high = UniformPolicy(self.registry, self.ckks_param_id, "high").generate(
+        initial = self.initial_schedule or UniformPolicy(
+            self.registry,
+            self.ckks_param_id,
+            "high",
+        ).generate(
             operators,
             metadata={**(metadata or {}), "policy": "hetune_greedy"},
             constraints=constraints,
         )
         current: dict[str, ScheduleEntry] = {
-            entry.operator_key.id: entry for entry in high.entries
+            entry.operator_key.id: entry for entry in initial.entries
         }
         sensitivity = {
             (record.operator_key.id, record.candidate_id): record
@@ -140,9 +203,17 @@ class GreedyDowngradePolicy:
             candidates = _quality_sorted(self.registry, operator.operator_type)
             if len(candidates) <= 1:
                 continue
-            current_candidate = candidates[0]
+            current_entry = current.get(operator.id)
+            if current_entry is None:
+                continue
+            current_candidate = current_entry.candidate_id
             current_cost = self.cost_model.weighted_cost(operator, current_candidate)
             for candidate_id in candidates[1:]:
+                if (
+                    self.registry.get(candidate_id).spec.quality_rank
+                    >= self.registry.get(current_candidate).spec.quality_rank
+                ):
+                    continue
                 new_cost = self.cost_model.weighted_cost(operator, candidate_id)
                 saving = max(current_cost - new_cost, 0.0)
                 record = sensitivity.get((operator.id, candidate_id))
@@ -236,9 +307,10 @@ class ValidatedGreedyResult:
 @dataclass(slots=True)
 class ValidatedGreedyDowngradePolicy:
     registry: ApproximationRegistry
-    cost_model: StaticCostModel
+    cost_model: Any
     evaluate_schedule: Callable[[SchedulePlan], Any]
     baseline_schedule: SchedulePlan | None = None
+    initial_schedule: SchedulePlan | None = None
     max_accuracy_drop: float = 0.01
     max_logit_kl: float = 0.02
     max_label_flip_rate: float = 0.01
@@ -246,6 +318,7 @@ class ValidatedGreedyDowngradePolicy:
     protected_operator_types: tuple[str, ...] = ("softmax",)
     min_quality_rank_by_operator_type: dict[str, int] | None = None
     ckks_param_id: str = "static_ckks_128"
+    schedule_constraint_checker: Callable[[SchedulePlan], str | None] | None = None
 
     def generate(
         self,
@@ -261,7 +334,11 @@ class ValidatedGreedyDowngradePolicy:
         constraints.setdefault("max_downgrades_per_layer", self.max_downgrades_per_layer)
         constraints.setdefault("protected_operator_types", list(self.protected_operator_types))
 
-        high = UniformPolicy(self.registry, self.ckks_param_id, "high").generate(
+        high = self.initial_schedule or UniformPolicy(
+            self.registry,
+            self.ckks_param_id,
+            "high",
+        ).generate(
             operators,
             metadata={**(metadata or {}), "policy": "hetune_validated_greedy"},
             constraints=constraints,
@@ -283,7 +360,7 @@ class ValidatedGreedyDowngradePolicy:
             (record.operator_key.id, record.candidate_id): record
             for record in sensitivity_records
         }
-        downgrades = self._rank_downgrades(operators, sensitivity)
+        downgrades = self._rank_downgrades(operators, sensitivity, current)
         decisions: list[DowngradeDecision] = []
         layer_downgrade_counts: dict[int, int] = {}
         downgraded_operator_ids: set[str] = set()
@@ -330,6 +407,22 @@ class ValidatedGreedyDowngradePolicy:
                 metadata={**(metadata or {}), "policy": "hetune_validated_greedy"},
                 constraints=constraints,
             )
+            if self.schedule_constraint_checker is not None:
+                reason = self.schedule_constraint_checker(trial_schedule)
+                if reason is not None:
+                    decisions.append(
+                        self._decision(
+                            operator,
+                            existing.candidate_id,
+                            candidate_id,
+                            accepted=False,
+                            reason=reason,
+                            benefit=benefit,
+                            cost_saving=cost_saving,
+                            single_accuracy_drop=single_accuracy_drop,
+                        )
+                    )
+                    continue
             result = self.evaluate_schedule(trial_schedule)
             combined_accuracy_drop = baseline.accuracy - result.accuracy
             combined_logit_kl = logit_kl(baseline.logits, result.logits)
@@ -405,15 +498,24 @@ class ValidatedGreedyDowngradePolicy:
         self,
         operators: list[OperatorKey],
         sensitivity: dict[tuple[str, str], SensitivityRecord],
+        current_entries: dict[str, ScheduleEntry],
     ) -> list[tuple[float, float, OperatorKey, str]]:
         downgrades: list[tuple[float, float, OperatorKey, str]] = []
         for operator in operators:
             candidates = _quality_sorted(self.registry, operator.operator_type)
             if len(candidates) <= 1:
                 continue
-            current_candidate = candidates[0]
+            current_entry = current_entries.get(operator.id)
+            if current_entry is None:
+                continue
+            current_candidate = current_entry.candidate_id
             current_cost = self.cost_model.weighted_cost(operator, current_candidate)
             for candidate_id in candidates[1:]:
+                if (
+                    self.registry.get(candidate_id).spec.quality_rank
+                    >= self.registry.get(current_candidate).spec.quality_rank
+                ):
+                    continue
                 new_cost = self.cost_model.weighted_cost(operator, candidate_id)
                 cost_saving = max(current_cost - new_cost, 0.0)
                 record = sensitivity.get((operator.id, candidate_id))

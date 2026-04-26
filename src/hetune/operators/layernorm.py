@@ -134,6 +134,7 @@ def layernorm_providers() -> list[LayerNormProvider]:
                 quality_rank=70,
                 degree=2,
                 depth=3,
+                supports_ckks_backend=True,
                 expected_accuracy_risk=0.04,
                 cost_hint=CostVector(latency_ms=3.0, rotations=2, ct_ct_mults=3, depth=3, rescale_count=3),
             )
@@ -145,6 +146,7 @@ def layernorm_providers() -> list[LayerNormProvider]:
                 approximation_family="centered_affine",
                 quality_rank=45,
                 depth=1,
+                supports_ckks_backend=True,
                 expected_accuracy_risk=0.07,
                 cost_hint=CostVector(latency_ms=1.2, rotations=1, ct_ct_mults=1, ct_pt_mults=2, depth=1, rescale_count=1),
             )
@@ -156,6 +158,7 @@ def layernorm_providers() -> list[LayerNormProvider]:
                 approximation_family="affine",
                 quality_rank=20,
                 depth=0,
+                supports_ckks_backend=True,
                 expected_accuracy_risk=0.12,
                 cost_hint=CostVector(latency_ms=0.4, ct_pt_mults=1, depth=0),
             )

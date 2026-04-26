@@ -1,0 +1,22 @@
+{
+  "backend_id": "seal_cpu",
+  "benchmark_repetitions": 10,
+  "benchmark_warmups": 3,
+  "ckks_param_id": "seal_profiled_bootstrap",
+  "coefficient_modulus_chain": [
+    60,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    60
+  ],
+  "default_scale": "2^40",
+  "poly_modulus_degree": 32768,
+  "seal_build_path": "external/SEAL/build",
+  "seal_install_path": "external/SEAL/install",
+  "seal_source_path": "external/SEAL",
+  "seal_version": "4.1.1"
+}

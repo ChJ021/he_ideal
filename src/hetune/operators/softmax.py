@@ -131,7 +131,7 @@ def softmax_providers() -> list[SoftmaxProvider]:
                 degree=2,
                 valid_input_range=(-8.0, 0.0),
                 depth=2,
-                supports_ckks_backend=False,
+                supports_ckks_backend=True,
                 expected_accuracy_risk=0.08,
                 cost_hint=CostVector(latency_ms=2.0, rotations=1, ct_ct_mults=2, ct_pt_mults=2, depth=2, rescale_count=2),
             )
@@ -145,7 +145,7 @@ def softmax_providers() -> list[SoftmaxProvider]:
                 degree=2,
                 valid_input_range=(-4.0, 0.0),
                 depth=1,
-                supports_ckks_backend=False,
+                supports_ckks_backend=True,
                 expected_accuracy_risk=0.12,
                 cost_hint=CostVector(latency_ms=1.2, rotations=1, ct_ct_mults=1, ct_pt_mults=2, depth=1, rescale_count=1),
             )

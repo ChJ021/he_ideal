@@ -1,0 +1,12 @@
+backend_id,ckks_param_id,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb
+seal_cpu,seal_profiled,gelu.exact.high.v1,7.0,0,6,7,5,0,5,0,0.0
+seal_cpu,seal_profiled,gelu.poly.degree2.v1,0.8,0,1,2,1,0,1,0,0.0
+seal_cpu,seal_profiled,gelu.poly.degree3.v1,1.5,0,2,3,2,0,2,0,0.0
+seal_cpu,seal_profiled,gelu.poly.degree5.v1,2.5,0,3,4,3,0,3,0,0.0
+seal_cpu,seal_profiled,layernorm.affine.low_cost.v1,0.4,0,0,1,0,0,0,0,0.0
+seal_cpu,seal_profiled,layernorm.centered.mid_cost.v1,1.2,1,1,2,1,0,1,0,0.0
+seal_cpu,seal_profiled,layernorm.exact.high.v1,8.5,2,6,7,6,0,6,0,0.0
+seal_cpu,seal_profiled,layernorm.newton.low_iter.v1,3.0,2,3,0,3,0,3,0,0.0
+seal_cpu,seal_profiled,softmax.exact.high.v1,8.0,3,4,4,4,0,4,0,0.0
+seal_cpu,seal_profiled,softmax.poly_exp.degree2.v1,2.0,1,2,2,2,0,2,0,0.0
+seal_cpu,seal_profiled,softmax.power.degree2.v1,1.2,1,1,2,1,0,1,0,0.0

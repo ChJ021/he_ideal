@@ -19,3 +19,16 @@ def test_static_cost_prefers_low_degree_gelu():
     high = cost_model.weighted_cost(operator, "gelu.exact.high.v1")
     low = cost_model.weighted_cost(operator, "gelu.poly.degree2.v1")
     assert low < high
+
+
+def test_ckks_only_registry_filters_to_he_supported_candidates():
+    registry = build_default_registry(ckks_only=True)
+
+    assert registry.get("gelu.poly.degree2.v1").candidate_id == "gelu.poly.degree2.v1"
+    assert registry.get("softmax.power.degree2.v1").candidate_id == "softmax.power.degree2.v1"
+    try:
+        registry.get("softmax.clipped.stable.v1")
+    except KeyError:
+        pass
+    else:
+        raise AssertionError("softmax.clipped.stable.v1 should not be in ckks_only registry")
