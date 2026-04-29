@@ -4,10 +4,12 @@
 #include <chrono>
 #include <cmath>
 #include <complex>
+#include <cctype>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -59,6 +61,14 @@ struct Request {
     std::string packing_strategy = "row_packed";
     std::string token_block_size = "auto";
     bool profile_native_stages = true;
+    bool bootstrap_enabled = false;
+    std::vector<uint32_t> bootstrap_level_budget = {4, 4};
+    std::vector<uint32_t> bootstrap_dim1 = {0, 0};
+    int bootstrap_levels_after = 10;
+    int bootstrap_num_iterations = 1;
+    int bootstrap_precision = 0;
+    bool bootstrap_auto_guard = true;
+    int bootstrap_guard_min_levels = 2;
 };
 
 struct Blob {
@@ -68,6 +78,15 @@ struct Blob {
     fs::path path;
     std::vector<double> f64;
     std::vector<int> i32;
+};
+
+struct GeluApprox {
+    int layer_index = 0;
+    std::string operator_name;
+    std::string candidate_id;
+    int degree = 0;
+    double scale = 0.0;
+    std::vector<double> power_coefficients;
 };
 
 struct Manifest {
@@ -84,6 +103,10 @@ struct Manifest {
     int num_labels = 2;
     std::unordered_map<std::string, Blob> blobs;
     std::map<std::string, std::string> candidates;
+    std::map<std::string, std::string> bootstrap_policies;
+    std::map<std::string, GeluApprox> gelu_approximations;
+    GeluApprox default_gelu;
+    bool has_default_gelu = false;
 };
 
 struct EncVec {
@@ -99,7 +122,10 @@ struct StageTimes {
     double ffn_ms = 0.0;
     double classifier_ms = 0.0;
     double decrypt_ms = 0.0;
+    double bootstrap_ms = 0.0;
     int rotation_key_count = 0;
+    int bootstrap_policy_count = 0;
+    int bootstrap_auto_count = 0;
     int plaintext_cache_entries = 0;
 };
 
@@ -168,6 +194,44 @@ bool json_bool(const std::string& json, const std::string& key, bool fallback) {
     return match[1].str() == "true";
 }
 
+void trim(std::string& value) {
+    value.erase(value.begin(), std::find_if(value.begin(), value.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+    value.erase(std::find_if(value.rbegin(), value.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), value.end());
+}
+
+std::vector<uint32_t> json_uint_array(
+    const std::string& json,
+    const std::string& key,
+    const std::vector<uint32_t>& fallback) {
+    const std::regex pattern("\"" + key + "\"\\s*:\\s*\\[([^\\]]*)\\]");
+    std::smatch match;
+    if (!std::regex_search(json, match, pattern)) {
+        return fallback;
+    }
+    std::vector<uint32_t> values;
+    std::stringstream stream(match[1].str());
+    std::string item;
+    while (std::getline(stream, item, ',')) {
+        trim(item);
+        if (!item.empty()) {
+            values.push_back(static_cast<uint32_t>(std::stoul(item)));
+        }
+    }
+    return values.empty() ? fallback : values;
+}
+
+std::vector<uint32_t> normalize_pair(std::vector<uint32_t> values, const std::vector<uint32_t>& fallback) {
+    if (values.size() < 2) {
+        values = fallback;
+    }
+    values.resize(2);
+    return values;
+}
+
 Request load_request(const fs::path& path) {
     const std::string json = read_file(path);
     Request request;
@@ -202,6 +266,18 @@ Request load_request(const fs::path& path) {
         request.token_block_size = "auto";
     }
     request.profile_native_stages = json_bool(json, "profile_native_stages", true);
+    request.bootstrap_enabled = json_bool(json, "bootstrap_enabled", false);
+    request.bootstrap_level_budget = normalize_pair(
+        json_uint_array(json, "bootstrap_level_budget", {4, 4}),
+        {4, 4});
+    request.bootstrap_dim1 = normalize_pair(
+        json_uint_array(json, "bootstrap_dim1", {0, 0}),
+        {0, 0});
+    request.bootstrap_levels_after = std::max(1, json_int(json, "bootstrap_levels_after", 10));
+    request.bootstrap_num_iterations = std::max(1, json_int(json, "bootstrap_num_iterations", 1));
+    request.bootstrap_precision = std::max(0, json_int(json, "bootstrap_precision", 0));
+    request.bootstrap_auto_guard = json_bool(json, "bootstrap_auto_guard", true);
+    request.bootstrap_guard_min_levels = std::max(0, json_int(json, "bootstrap_guard_min_levels", 2));
     if (request.case_name.empty() || request.schedule_name.empty() || request.output_dir.empty()) {
         throw std::runtime_error("request JSON is missing required deployment fields");
     }
@@ -283,14 +359,14 @@ CostCounts candidate_cost(const std::string& candidate_id) {
     if (candidate_id == "gelu.exact.high.v1") {
         return {.rotations = 0, .ct_ct_mults = 6, .ct_pt_mults = 7, .rescale_count = 5, .relin_count = 1, .depth = 5};
     }
-    if (candidate_id == "gelu.poly.degree5.v1") {
+    if (candidate_id == "gelu.chebyshev.degree11.v1") {
+        return {.rotations = 0, .ct_ct_mults = 5, .ct_pt_mults = 6, .rescale_count = 5, .relin_count = 1, .depth = 5};
+    }
+    if (candidate_id == "gelu.chebyshev.degree9.v1") {
+        return {.rotations = 0, .ct_ct_mults = 4, .ct_pt_mults = 5, .rescale_count = 4, .relin_count = 1, .depth = 4};
+    }
+    if (candidate_id == "gelu.chebyshev.degree5.v1") {
         return {.rotations = 0, .ct_ct_mults = 3, .ct_pt_mults = 4, .rescale_count = 3, .relin_count = 1, .depth = 3};
-    }
-    if (candidate_id == "gelu.poly.degree3.v1") {
-        return {.rotations = 0, .ct_ct_mults = 2, .ct_pt_mults = 3, .rescale_count = 2, .relin_count = 1, .depth = 2};
-    }
-    if (candidate_id == "gelu.poly.degree2.v1") {
-        return {.rotations = 0, .ct_ct_mults = 1, .ct_pt_mults = 2, .rescale_count = 1, .relin_count = 1, .depth = 1};
     }
     if (candidate_id == "layernorm.exact.high.v1") {
         return {.rotations = 2, .ct_ct_mults = 6, .ct_pt_mults = 7, .rescale_count = 6, .relin_count = 1, .depth = 6};
@@ -457,6 +533,19 @@ std::vector<std::size_t> parse_shape(const std::string& value) {
     return shape;
 }
 
+std::vector<double> parse_double_array(const std::string& value) {
+    std::vector<double> out;
+    std::stringstream stream(value);
+    std::string item;
+    while (std::getline(stream, item, ',')) {
+        trim(item);
+        if (!item.empty()) {
+            out.push_back(std::stod(item));
+        }
+    }
+    return out;
+}
+
 std::size_t shape_size(const std::vector<std::size_t>& shape) {
     if (shape.empty()) {
         return 0;
@@ -532,15 +621,41 @@ Manifest load_manifest(const fs::path& path) {
     }
 
     const std::regex schedule_pattern(
-        "\\{\\s*\"layer_index\"\\s*:\\s*([0-9]+)\\s*,\\s*\"operator_type\"\\s*:\\s*\"([^\"]+)\"\\s*,\\s*\"operator_name\"\\s*:\\s*\"([^\"]+)\"[\\s\\S]*?\"candidate_id\"\\s*:\\s*\"([^\"]+)\"");
+        "\\{\\s*\"layer_index\"\\s*:\\s*([0-9]+)\\s*,\\s*\"operator_type\"\\s*:\\s*\"([^\"]+)\"\\s*,\\s*\"operator_name\"\\s*:\\s*\"([^\"]+)\"[\\s\\S]*?\"candidate_id\"\\s*:\\s*\"([^\"]+)\"[\\s\\S]*?\"bootstrap_policy\"\\s*:\\s*\"([^\"]*)\"");
     for (auto it = std::sregex_iterator(json.begin(), json.end(), schedule_pattern);
          it != std::sregex_iterator(); ++it) {
         const int layer = std::stoi((*it)[1].str());
         const std::string op = (*it)[2].str();
         const std::string name = (*it)[3].str();
         const std::string candidate = (*it)[4].str();
-        manifest.candidates[std::to_string(layer) + "|" + op + "|" + name] = candidate;
+        const std::string bootstrap_policy = (*it)[5].str();
+        const std::string exact_key = std::to_string(layer) + "|" + op + "|" + name;
+        manifest.candidates[exact_key] = candidate;
         manifest.candidates[std::to_string(layer) + "|" + op + "|"] = candidate;
+        manifest.bootstrap_policies[exact_key] = bootstrap_policy;
+    }
+
+    const std::regex gelu_pattern(
+        "\\{\\s*\"layer_index\"\\s*:\\s*(-?[0-9]+)\\s*,\\s*\"operator_name\"\\s*:\\s*\"([^\"]+)\"[\\s\\S]*?\"candidate_id\"\\s*:\\s*\"([^\"]+)\"[\\s\\S]*?\"degree\"\\s*:\\s*([0-9]+)\\s*,\\s*\"scale\"\\s*:\\s*([-+0-9.eE]+)[\\s\\S]*?\"power_coefficients\"\\s*:\\s*\\[([^\\]]*)\\]");
+    for (auto it = std::sregex_iterator(json.begin(), json.end(), gelu_pattern);
+         it != std::sregex_iterator(); ++it) {
+        GeluApprox approx;
+        approx.layer_index = std::stoi((*it)[1].str());
+        approx.operator_name = (*it)[2].str();
+        approx.candidate_id = (*it)[3].str();
+        approx.degree = std::stoi((*it)[4].str());
+        approx.scale = std::stod((*it)[5].str());
+        approx.power_coefficients = parse_double_array((*it)[6].str());
+        if (approx.power_coefficients.empty()) {
+            throw std::runtime_error("GELU approximation has no power coefficients: " + approx.candidate_id);
+        }
+        if (approx.layer_index < 0) {
+            manifest.default_gelu = approx;
+            manifest.has_default_gelu = true;
+        }
+        else {
+            manifest.gelu_approximations[std::to_string(approx.layer_index) + "|" + approx.operator_name] = approx;
+        }
     }
 
     if (manifest.sample_count <= 0 || manifest.sequence_length <= 0 || manifest.hidden_size <= 0 ||
@@ -602,7 +717,17 @@ class HEEngine {
     HEEngine(const Request& request, std::size_t slots, CostCounts& counts)
         : request_(request), slots_(slots), counts_(counts) {
         CCParams<CryptoContextCKKSRNS> parameters;
-        parameters.SetMultiplicativeDepth(std::max(2, request.multiplicative_depth));
+        const SecretKeyDist secret_key_dist = UNIFORM_TERNARY;
+        parameters.SetSecretKeyDist(secret_key_dist);
+        actual_multiplicative_depth_ = std::max(2, request.multiplicative_depth);
+        if (request.bootstrap_enabled) {
+            const uint32_t bootstrap_depth =
+                FHECKKSRNS::GetBootstrapDepth(request.bootstrap_level_budget, secret_key_dist);
+            actual_multiplicative_depth_ = std::max(
+                actual_multiplicative_depth_,
+                static_cast<int>(request.bootstrap_levels_after + bootstrap_depth));
+        }
+        parameters.SetMultiplicativeDepth(static_cast<uint32_t>(actual_multiplicative_depth_));
         parameters.SetScalingModSize(static_cast<uint32_t>(std::max(30, request.scaling_mod_size)));
         parameters.SetFirstModSize(static_cast<uint32_t>(std::max(40, request.first_mod_size)));
         parameters.SetBatchSize(static_cast<uint32_t>(slots_));
@@ -615,8 +740,16 @@ class HEEngine {
         cc_->Enable(PKE);
         cc_->Enable(KEYSWITCH);
         cc_->Enable(LEVELEDSHE);
+        if (request.bootstrap_enabled) {
+            cc_->Enable(ADVANCEDSHE);
+            cc_->Enable(FHE);
+            cc_->EvalBootstrapSetup(request.bootstrap_level_budget, request.bootstrap_dim1, static_cast<uint32_t>(slots_));
+        }
         keys_ = cc_->KeyGen();
         cc_->EvalMultKeyGen(keys_.secretKey);
+        if (request.bootstrap_enabled) {
+            cc_->EvalBootstrapKeyGen(keys_.secretKey, static_cast<uint32_t>(slots_));
+        }
 
         const std::vector<int32_t> rotations = required_rotation_indices(request_, slots_);
         rotation_key_count_ = static_cast<int>(rotations.size());
@@ -672,9 +805,10 @@ class HEEngine {
     }
 
     EncVec mul_plain(const EncVec& left, const std::vector<double>& right) {
+        EncVec lhs = maybe_auto_bootstrap(left);
         counts_.ct_pt_mults += 1;
         Plaintext encoded = plain(right);
-        return {cc_->EvalMult(left.ct, encoded), left.logical_size};
+        return {cc_->EvalMult(lhs.ct, encoded), lhs.logical_size};
     }
 
     EncVec mul_plain_scalar(const EncVec& left, double scalar) {
@@ -682,11 +816,20 @@ class HEEngine {
     }
 
     EncVec mul(const EncVec& left, const EncVec& right) {
+        EncVec lhs = maybe_auto_bootstrap(left);
+        EncVec rhs = maybe_auto_bootstrap(right);
         counts_.ct_ct_mults += 1;
         counts_.relin_count += 1;
         counts_.rescale_count += 1;
         counts_.depth += 1;
-        return {cc_->EvalMult(left.ct, right.ct), std::max(left.logical_size, right.logical_size)};
+        return {cc_->EvalMult(lhs.ct, rhs.ct), std::max(lhs.logical_size, rhs.logical_size)};
+    }
+
+    EncVec policy_bootstrap(const EncVec& value, const std::string& label) {
+        if (!request_.bootstrap_enabled) {
+            throw std::runtime_error("schedule requires bootstrap before " + label + " but bootstrap_enabled is false");
+        }
+        return bootstrap(value, true);
     }
 
     EncVec rotate(const EncVec& value, int index) {
@@ -758,13 +901,65 @@ class HEEngine {
         return rotation_key_count_;
     }
 
+    int bootstrap_policy_count() const {
+        return bootstrap_policy_count_;
+    }
+
+    int bootstrap_auto_count() const {
+        return bootstrap_auto_count_;
+    }
+
+    double bootstrap_ms() const {
+        return bootstrap_ms_;
+    }
+
   private:
+    int remaining_levels(const EncVec& value) const {
+        return actual_multiplicative_depth_ -
+               static_cast<int>(value.ct->GetLevel()) -
+               (static_cast<int>(value.ct->GetNoiseScaleDeg()) - 1);
+    }
+
+    EncVec maybe_auto_bootstrap(const EncVec& value) {
+        if (!request_.bootstrap_enabled || !request_.bootstrap_auto_guard) {
+            return value;
+        }
+        if (remaining_levels(value) > request_.bootstrap_guard_min_levels) {
+            return value;
+        }
+        return bootstrap(value, false);
+    }
+
+    EncVec bootstrap(const EncVec& value, bool policy_requested) {
+        const auto start = std::chrono::steady_clock::now();
+        EncVec refreshed{
+            cc_->EvalBootstrap(
+                value.ct,
+                static_cast<uint32_t>(request_.bootstrap_num_iterations),
+                static_cast<uint32_t>(request_.bootstrap_precision)),
+            value.logical_size,
+        };
+        bootstrap_ms_ += elapsed_ms(start);
+        counts_.bootstrap_count += 1;
+        if (policy_requested) {
+            bootstrap_policy_count_ += 1;
+        }
+        else {
+            bootstrap_auto_count_ += 1;
+        }
+        return refreshed;
+    }
+
     Request request_;
     std::size_t slots_;
     CostCounts& counts_;
     CryptoContext<DCRTPoly> cc_;
     KeyPair<DCRTPoly> keys_;
     int rotation_key_count_ = 0;
+    int actual_multiplicative_depth_ = 0;
+    int bootstrap_policy_count_ = 0;
+    int bootstrap_auto_count_ = 0;
+    double bootstrap_ms_ = 0.0;
 };
 
 std::vector<double> slice_float_blob(const Blob& source, std::size_t offset, std::size_t count) {
@@ -1039,22 +1234,43 @@ std::tuple<EncVec, EncVec, EncVec> qkv_linear_fused(
     return {q_acc, k_acc, v_acc};
 }
 
-EncVec gelu_poly(HEEngine& he, const EncVec& x, const std::string& candidate_id) {
-    const auto slots = he.slots();
-    EncVec result = he.mul_plain_scalar(x, 0.5);
-    EncVec x2 = he.mul(x, x);
-    result = he.add(result, he.mul_plain_scalar(x2, 0.3989422804014327));
-    if (candidate_id.find("degree2") != std::string::npos) {
-        return result;
+EncVec encrypted_power(
+    HEEngine& he,
+    const EncVec& x,
+    int exponent,
+    std::map<int, EncVec>& cache) {
+    const auto found = cache.find(exponent);
+    if (found != cache.end()) {
+        return found->second;
     }
-    EncVec x3 = he.mul(x2, x);
-    result = he.add(result, he.mul_plain_scalar(x3, 0.035677408136300125));
-    if (candidate_id.find("degree3") != std::string::npos) {
-        return result;
+    EncVec out;
+    if (exponent % 2 == 0) {
+        EncVec half = encrypted_power(he, x, exponent / 2, cache);
+        out = he.mul(half, half);
     }
-    EncVec x5 = he.mul(he.mul(x3, x), x);
-    result = he.add(result, he.mul_plain_scalar(x5, -0.0003968253968253968));
-    (void)slots;
+    else {
+        EncVec previous = encrypted_power(he, x, exponent - 1, cache);
+        out = he.mul(previous, x);
+    }
+    cache.emplace(exponent, out);
+    return out;
+}
+
+EncVec gelu_chebyshev(HEEngine& he, const EncVec& x, const GeluApprox& approx) {
+    EncVec result = he.encrypted_zero(x.logical_size);
+    if (!approx.power_coefficients.empty()) {
+        result = he.add_plain(result, std::vector<double>(he.slots(), approx.power_coefficients[0]));
+    }
+    std::map<int, EncVec> powers;
+    powers.emplace(1, x);
+    for (std::size_t exponent = 1; exponent < approx.power_coefficients.size(); ++exponent) {
+        const double coeff = approx.power_coefficients[exponent];
+        if (std::abs(coeff) < 1.0e-18) {
+            continue;
+        }
+        EncVec term = encrypted_power(he, x, static_cast<int>(exponent), powers);
+        result = he.add(result, he.mul_plain_scalar(term, coeff));
+    }
     return result;
 }
 
@@ -1138,6 +1354,25 @@ std::string candidate_for(
     const std::string& name,
     const std::string& fallback);
 
+std::string bootstrap_policy_for(
+    const Manifest& manifest,
+    int layer,
+    const std::string& op,
+    const std::string& name);
+
+const GeluApprox& gelu_approx_for(
+    const Manifest& manifest,
+    int layer,
+    const std::string& name);
+
+EncVec maybe_policy_bootstrap(
+    HEEngine& he,
+    const EncVec& value,
+    const Manifest& manifest,
+    int layer,
+    const std::string& op,
+    const std::string& name);
+
 std::vector<EncVec> attention(
     HEEngine& he,
     const std::vector<EncVec>& hidden_states,
@@ -1200,6 +1435,7 @@ std::vector<EncVec> attention(
                 EncVec kh = he.mul_plain(k[key], mask);
                 EncVec dot = he.sum_slots(he.mul(qh, kh));
                 dot = he.mul_plain_scalar(dot, 1.0 / std::sqrt(static_cast<double>(head_dim)));
+                dot = maybe_policy_bootstrap(he, dot, manifest, layer_index, "softmax", "attention_softmax");
                 EncVec exp_score = exp_approx(he, dot, softmax_candidate);
                 denom = he.add(denom, exp_score);
                 exp_scores.push_back(exp_score);
@@ -1238,6 +1474,50 @@ std::string candidate_for(
     return by_type == manifest.candidates.end() ? fallback : by_type->second;
 }
 
+std::string bootstrap_policy_for(
+    const Manifest& manifest,
+    int layer,
+    const std::string& op,
+    const std::string& name) {
+    const auto exact = manifest.bootstrap_policies.find(std::to_string(layer) + "|" + op + "|" + name);
+    return exact == manifest.bootstrap_policies.end() ? "none" : exact->second;
+}
+
+const GeluApprox& gelu_approx_for(
+    const Manifest& manifest,
+    int layer,
+    const std::string& name) {
+    if (layer < 0) {
+        if (!manifest.has_default_gelu) {
+            throw std::runtime_error("forward manifest missing default GELU approximation");
+        }
+        return manifest.default_gelu;
+    }
+    const auto exact = manifest.gelu_approximations.find(std::to_string(layer) + "|" + name);
+    if (exact == manifest.gelu_approximations.end()) {
+        throw std::runtime_error("forward manifest missing GELU approximation for layer " +
+                                 std::to_string(layer) + " " + name);
+    }
+    return exact->second;
+}
+
+EncVec maybe_policy_bootstrap(
+    HEEngine& he,
+    const EncVec& value,
+    const Manifest& manifest,
+    int layer,
+    const std::string& op,
+    const std::string& name) {
+    const std::string policy = bootstrap_policy_for(manifest, layer, op, name);
+    if (policy == "none" || policy.empty()) {
+        return value;
+    }
+    if (policy != "bootstrap_before") {
+        throw std::runtime_error("unsupported bootstrap_policy: " + policy);
+    }
+    return he.policy_bootstrap(value, std::to_string(layer) + "|" + op + "|" + name);
+}
+
 std::vector<double> run_sample_forward(
     HEEngine& he,
     const Manifest& manifest,
@@ -1262,6 +1542,13 @@ std::vector<double> run_sample_forward(
             attention(he, states, blob(manifest, "inputs.attention_mask"), sample_index, manifest, layer, stage_times);
         for (std::size_t token = 0; token < seq; ++token) {
             EncVec residual = he.add(states[token], attn_output[token]);
+            residual = maybe_policy_bootstrap(
+                he,
+                residual,
+                manifest,
+                layer,
+                "layernorm",
+                "attention_layernorm");
             states[token] = layernorm(
                 he,
                 residual,
@@ -1280,9 +1567,16 @@ std::vector<double> run_sample_forward(
                 blob(manifest, layer_prefix + "ffn.lin1.bias"),
                 intermediate,
                 hidden);
-            const std::string gelu_candidate = candidate_for(manifest, layer, "gelu", "ffn_activation", "gelu.exact.high.v1");
+            const GeluApprox& gelu_approx = gelu_approx_for(manifest, layer, "ffn_activation");
             for (auto& chunk : ffn1) {
-                chunk = gelu_poly(he, chunk, gelu_candidate);
+                chunk = maybe_policy_bootstrap(
+                    he,
+                    chunk,
+                    manifest,
+                    layer,
+                    "gelu",
+                    "ffn_activation");
+                chunk = gelu_chebyshev(he, chunk, gelu_approx);
             }
             auto ffn2 = linear(
                 he,
@@ -1292,6 +1586,13 @@ std::vector<double> run_sample_forward(
                 hidden,
                 intermediate);
             EncVec residual = he.add(states[token], ffn2[0]);
+            residual = maybe_policy_bootstrap(
+                he,
+                residual,
+                manifest,
+                layer,
+                "layernorm",
+                "ffn_layernorm");
             states[token] = layernorm(
                 he,
                 residual,
@@ -1311,7 +1612,7 @@ std::vector<double> run_sample_forward(
         blob(manifest, "pre_classifier.bias"),
         hidden,
         hidden);
-    pooled[0] = gelu_poly(he, pooled[0], "gelu.poly.degree3.v1");
+    pooled[0] = gelu_chebyshev(he, pooled[0], gelu_approx_for(manifest, -1, "classifier_activation"));
     auto logits = linear(
         he,
         pooled,
@@ -1382,6 +1683,13 @@ std::string forward_result_json(
     out << "    \"ffn_ms\": " << stage_times.ffn_ms << ",\n";
     out << "    \"classifier_ms\": " << stage_times.classifier_ms << ",\n";
     out << "    \"decrypt_ms\": " << stage_times.decrypt_ms << ",\n";
+    out << "    \"bootstrap_mode\": \"" << (request.bootstrap_enabled ? "executed" : "disabled") << "\",\n";
+    out << "    \"bootstrap_ms\": " << stage_times.bootstrap_ms << ",\n";
+    out << "    \"bootstrap_policy_count\": " << stage_times.bootstrap_policy_count << ",\n";
+    out << "    \"bootstrap_auto_count\": " << stage_times.bootstrap_auto_count << ",\n";
+    out << "    \"bootstrap_level_budget\": ["
+        << request.bootstrap_level_budget[0] << ", " << request.bootstrap_level_budget[1] << "],\n";
+    out << "    \"bootstrap_levels_after\": " << request.bootstrap_levels_after << ",\n";
     out << "    \"privacy_boundary\": \"client_embedding\",\n";
     out << "    \"accuracy_source\": \"native_decrypted_logits\",\n";
     out << "    \"manifest_path\": \"" << json_escape(manifest.path.string()) << "\"\n";
@@ -1405,6 +1713,9 @@ std::vector<std::vector<double>> run_forward_once(
     for (std::size_t sample = 0; sample < static_cast<std::size_t>(manifest.sample_count); ++sample) {
         logits.push_back(run_sample_forward(he, manifest, sample, stage_times));
     }
+    stage_times.bootstrap_ms = he.bootstrap_ms();
+    stage_times.bootstrap_policy_count = he.bootstrap_policy_count();
+    stage_times.bootstrap_auto_count = he.bootstrap_auto_count();
     counts.memory_mb = static_cast<double>(slots * manifest.sample_count * manifest.sequence_length * sizeof(double)) /
                        (1024.0 * 1024.0);
     return logits;

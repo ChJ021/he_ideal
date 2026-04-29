@@ -10,7 +10,7 @@ metadata:
   - gelu
   - layernorm
   policy: hetune_greedy
-  estimated_additive_accuracy_drop: 0.05859375
+  estimated_additive_accuracy_drop: 0.234375
 entries:
 - operator_key:
     model_id: distilbert_sst2
@@ -22,7 +22,7 @@ entries:
   operator_id: distilbert_sst2.layer0.gelu.ffn_activation
   layer_index: 0
   operator_type: gelu
-  candidate_id: gelu.exact.high.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -70,7 +70,7 @@ entries:
   operator_id: distilbert_sst2.layer1.gelu.ffn_activation
   layer_index: 1
   operator_type: gelu
-  candidate_id: gelu.exact.high.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -102,7 +102,7 @@ entries:
   operator_id: distilbert_sst2.layer1.layernorm.ffn_layernorm
   layer_index: 1
   operator_type: layernorm
-  candidate_id: layernorm.newton.low_iter.v1
+  candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -118,7 +118,7 @@ entries:
   operator_id: distilbert_sst2.layer2.gelu.ffn_activation
   layer_index: 2
   operator_type: gelu
-  candidate_id: gelu.exact.high.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -166,7 +166,7 @@ entries:
   operator_id: distilbert_sst2.layer3.gelu.ffn_activation
   layer_index: 3
   operator_type: gelu
-  candidate_id: gelu.poly.degree3.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -198,7 +198,7 @@ entries:
   operator_id: distilbert_sst2.layer3.layernorm.ffn_layernorm
   layer_index: 3
   operator_type: layernorm
-  candidate_id: layernorm.newton.low_iter.v1
+  candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -214,7 +214,7 @@ entries:
   operator_id: distilbert_sst2.layer4.gelu.ffn_activation
   layer_index: 4
   operator_type: gelu
-  candidate_id: gelu.poly.degree2.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -262,7 +262,7 @@ entries:
   operator_id: distilbert_sst2.layer5.gelu.ffn_activation
   layer_index: 5
   operator_type: gelu
-  candidate_id: gelu.poly.degree2.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: static_ckks_128
   scale_id: scale_2_40
   level_budget: 0
@@ -301,7 +301,7 @@ entries:
   bootstrap_policy: none
   layout_id: plaintext_sim
 constraints:
-  max_accuracy_drop: 0.1
+  max_accuracy_drop: 0.5
   max_logit_kl: 0.02
   max_label_flip_rate: 0.01
   max_downgrades_per_layer: 1

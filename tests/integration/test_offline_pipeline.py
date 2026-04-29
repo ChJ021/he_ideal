@@ -18,7 +18,7 @@ def test_offline_schedule_pipeline_without_huggingface():
     records = [
         SensitivityRecord(op, candidate, 1.0, 0.999, 0.001, 0.0, 0.0)
         for op, candidate in [
-            (operators[0], "gelu.poly.degree3.v1"),
+            (operators[0], "gelu.chebyshev.degree9.v1"),
             (operators[1], "layernorm.newton.low_iter.v1"),
         ]
     ]

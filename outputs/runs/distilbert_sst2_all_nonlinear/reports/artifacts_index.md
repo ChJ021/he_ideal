@@ -18,11 +18,11 @@
 | Distillation overrides | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/overrides.pt` | `True` |
 | Distillation overrides summary | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/overrides_summary.csv` | `True` |
 | Distillation report | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/distillation/report.md` | `True` |
-| HE metrics | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/he_metrics.csv` | `True` |
-| HE cost breakdown | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/he_cost_breakdown.csv` | `True` |
-| HE bootstrap plan | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/bootstrap_plan.csv` | `True` |
+| HE metrics | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/he_metrics.csv` | `False` |
+| HE cost breakdown | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/he_cost_breakdown.csv` | `False` |
+| HE bootstrap plan | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/he_analysis/bootstrap_plan.csv` | `False` |
 | Sensitivity heatmap | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/figures/sensitivity_heatmap.png` | `True` |
-| HE cost breakdown figure | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/figures/he_cost_breakdown.png` | `True` |
+| HE cost breakdown figure | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/figures/he_cost_breakdown.png` | `False` |
 | Report | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/reports/report.md` | `True` |
-| HE report | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/reports/he_report.md` | `True` |
+| HE report | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/reports/he_report.md` | `False` |
 | Manifest | `/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear/manifest.yaml` | `True` |

@@ -16,12 +16,12 @@ class GeluProvider(ApproximationProvider):
 
             return torch.nn.functional.gelu(x)
 
-        def calibrated_high(x):
+        def calibrated_chebyshev(x, degree: int):
             import torch
 
             stats = _stats_from_context(context)
-            scale = _calibrated_gelu_scale(stats)
-            coeffs = _gelu_coefficients(scale=scale, degree=13)
+            scale = gelu_calibrated_scale(stats)
+            coeffs = gelu_chebyshev_coefficients(scale=scale, degree=degree)
             central = _eval_chebyshev(x, coeffs, -scale, scale)
             # Plaintext simulation of a sign-gated polynomial: GELU tends to
             # 0 on the negative tail and identity on the positive tail.
@@ -31,22 +31,12 @@ class GeluProvider(ApproximationProvider):
                 torch.where(x > scale, x, central),
             )
 
-        def degree2(x):
-            return 0.5 * x + 0.25 * x * x
-
-        def degree3(x):
-            return 0.5 * x + 0.197 * x * x + 0.035677 * x * x * x
-
-        def degree5(x):
-            x2 = x * x
-            return 0.5 * x + 0.197 * x2 + 0.035677 * x2 * x - 0.0012 * x2 * x2 * x
-
         functions = {
             "gelu.base": base,
-            "gelu.exact.high.v1": calibrated_high,
-            "gelu.poly.degree2.v1": degree2,
-            "gelu.poly.degree3.v1": degree3,
-            "gelu.poly.degree5.v1": degree5,
+            "gelu.exact.high.v1": lambda x: calibrated_chebyshev(x, degree=13),
+            "gelu.chebyshev.degree11.v1": lambda x: calibrated_chebyshev(x, degree=11),
+            "gelu.chebyshev.degree9.v1": lambda x: calibrated_chebyshev(x, degree=9),
+            "gelu.chebyshev.degree5.v1": lambda x: calibrated_chebyshev(x, degree=5),
         }
         if candidate not in functions:
             raise KeyError(f"Unknown GELU candidate: {candidate}")
@@ -87,43 +77,43 @@ def gelu_providers() -> list[GeluProvider]:
         GeluProvider(
             ApproximationSpec(
                 operator_type="gelu",
-                candidate_id="gelu.poly.degree5.v1",
-                approximation_family="polynomial",
-                quality_rank=80,
+                candidate_id="gelu.chebyshev.degree11.v1",
+                approximation_family="calibrated_chebyshev_gelu",
+                quality_rank=90,
+                degree=11,
+                valid_input_range=(-8.0, 8.0),
+                depth=5,
+                supports_ckks_backend=True,
+                expected_accuracy_risk=0.002,
+                cost_hint=CostVector(latency_ms=5.8, ct_ct_mults=5, ct_pt_mults=6, depth=5, rescale_count=5),
+            )
+        ),
+        GeluProvider(
+            ApproximationSpec(
+                operator_type="gelu",
+                candidate_id="gelu.chebyshev.degree9.v1",
+                approximation_family="calibrated_chebyshev_gelu",
+                quality_rank=75,
+                degree=9,
+                valid_input_range=(-8.0, 8.0),
+                depth=4,
+                supports_ckks_backend=True,
+                expected_accuracy_risk=0.006,
+                cost_hint=CostVector(latency_ms=4.4, ct_ct_mults=4, ct_pt_mults=5, depth=4, rescale_count=4),
+            )
+        ),
+        GeluProvider(
+            ApproximationSpec(
+                operator_type="gelu",
+                candidate_id="gelu.chebyshev.degree5.v1",
+                approximation_family="calibrated_chebyshev_gelu",
+                quality_rank=55,
                 degree=5,
-                valid_input_range=(-4.0, 4.0),
+                valid_input_range=(-8.0, 8.0),
                 depth=3,
                 supports_ckks_backend=True,
-                expected_accuracy_risk=0.01,
-                cost_hint=CostVector(latency_ms=2.5, ct_ct_mults=3, ct_pt_mults=4, depth=3, rescale_count=3),
-            )
-        ),
-        GeluProvider(
-            ApproximationSpec(
-                operator_type="gelu",
-                candidate_id="gelu.poly.degree3.v1",
-                approximation_family="polynomial",
-                quality_rank=60,
-                degree=3,
-                valid_input_range=(-3.0, 3.0),
-                depth=2,
-                supports_ckks_backend=True,
-                expected_accuracy_risk=0.03,
-                cost_hint=CostVector(latency_ms=1.5, ct_ct_mults=2, ct_pt_mults=3, depth=2, rescale_count=2),
-            )
-        ),
-        GeluProvider(
-            ApproximationSpec(
-                operator_type="gelu",
-                candidate_id="gelu.poly.degree2.v1",
-                approximation_family="polynomial",
-                quality_rank=30,
-                degree=2,
-                valid_input_range=(-2.5, 2.5),
-                depth=1,
-                supports_ckks_backend=True,
-                expected_accuracy_risk=0.08,
-                cost_hint=CostVector(latency_ms=0.8, ct_ct_mults=1, ct_pt_mults=2, depth=1, rescale_count=1),
+                expected_accuracy_risk=0.02,
+                cost_hint=CostVector(latency_ms=2.6, ct_ct_mults=3, ct_pt_mults=4, depth=3, rescale_count=3),
             )
         ),
     ]
@@ -136,7 +126,20 @@ def _stats_from_context(context: dict | None) -> dict:
     return stats if isinstance(stats, dict) else {}
 
 
-def _calibrated_gelu_scale(stats: dict) -> float:
+def gelu_degree_for_candidate(candidate_id: str) -> int:
+    degrees = {
+        "gelu.exact.high.v1": 13,
+        "gelu.chebyshev.degree11.v1": 11,
+        "gelu.chebyshev.degree9.v1": 9,
+        "gelu.chebyshev.degree5.v1": 5,
+    }
+    try:
+        return degrees[candidate_id]
+    except KeyError as exc:
+        raise KeyError(f"Unknown GELU Chebyshev candidate: {candidate_id}") from exc
+
+
+def gelu_calibrated_scale(stats: dict) -> float:
     raw = stats.get("abs_p99") or stats.get("abs_p95") or 4.0
     try:
         scale = float(raw)
@@ -148,7 +151,7 @@ def _calibrated_gelu_scale(stats: dict) -> float:
 
 
 @lru_cache(maxsize=128)
-def _gelu_coefficients(scale: float, degree: int) -> tuple[float, ...]:
+def gelu_chebyshev_coefficients(scale: float, degree: int) -> tuple[float, ...]:
     import numpy as np
 
     scale = round(float(scale), 3)
@@ -162,6 +165,19 @@ def _gelu_coefficients(scale: float, degree: int) -> tuple[float, ...]:
         domain=[-scale, scale],
     )
     return tuple(float(value) for value in fitted.coef)
+
+
+@lru_cache(maxsize=128)
+def gelu_power_coefficients(scale: float, degree: int) -> tuple[float, ...]:
+    import numpy as np
+
+    scale = round(float(scale), 3)
+    cheb = np.polynomial.Chebyshev(
+        gelu_chebyshev_coefficients(scale=scale, degree=degree),
+        domain=[-scale, scale],
+    )
+    power = cheb.convert(kind=np.polynomial.Polynomial)
+    return tuple(float(value) for value in power.coef)
 
 
 def _eval_chebyshev(x, coeffs: tuple[float, ...], lower: float, upper: float):

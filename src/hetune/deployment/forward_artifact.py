@@ -7,10 +7,17 @@ from typing import Any
 
 import numpy as np
 
-from hetune.core.types import SchedulePlan
+from hetune.core.types import ExperimentPaths, SchedulePlan
 from hetune.experiments.data import load_tokenized_dataset
 from hetune.experiments.distillation import load_override_payload
 from hetune.models.hf_adapter import HFSequenceClassifierAdapter
+from hetune.operators.gelu import (
+    gelu_calibrated_scale,
+    gelu_chebyshev_coefficients,
+    gelu_degree_for_candidate,
+    gelu_power_coefficients,
+)
+from hetune.profiling.calibration import load_calibration_stats
 
 
 @dataclass(slots=True)
@@ -124,6 +131,8 @@ def export_distilbert_forward_artifact(
     write_blob("classifier.bias", _tensor(model.classifier.bias), "float32")
 
     config = model.config
+    calibration_stats = _load_forward_calibration_stats(loaded_experiment)
+    gelu_approximations = _gelu_approximations(schedule, calibration_stats)
     manifest = {
         "format_version": 1,
         "runner_mode": "openfhe_distilbert_forward",
@@ -141,6 +150,7 @@ def export_distilbert_forward_artifact(
         "privacy_boundary": "client_embedding",
         "accuracy_source": "native_decrypted_logits",
         "ckks": _public_ckks_config(ckks_config),
+        "gelu_approximations": gelu_approximations,
         "schedule_entries": [
             {
                 "layer_index": entry.operator_key.layer_index,
@@ -168,6 +178,66 @@ def _tensor(value: Any) -> np.ndarray:
     return value.detach().cpu().numpy().astype(np.float32)
 
 
+def _load_forward_calibration_stats(loaded_experiment: Any) -> dict[str, dict[str, Any]]:
+    experiment_id = loaded_experiment.experiment["experiment_id"]
+    output_root = loaded_experiment.root / loaded_experiment.experiment.get("output_root", "outputs")
+    stats_path = ExperimentPaths(experiment_id, root=output_root).profile_dir() / "operator_calibration_stats.csv"
+    return load_calibration_stats(stats_path)
+
+
+def _gelu_approximations(
+    schedule: SchedulePlan,
+    calibration_stats: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for entry in schedule.entries:
+        if entry.operator_key.operator_type != "gelu":
+            continue
+        rows.append(
+            _gelu_approximation_row(
+                layer_index=entry.operator_key.layer_index,
+                operator_name=entry.operator_key.name,
+                operator_id=entry.operator_key.id,
+                candidate_id=entry.candidate_id,
+                stats=calibration_stats.get(entry.operator_key.id, {}),
+            )
+        )
+    rows.append(
+        _gelu_approximation_row(
+            layer_index=-1,
+            operator_name="classifier_activation",
+            operator_id="classifier_activation",
+            candidate_id="gelu.exact.high.v1",
+            stats={},
+        )
+    )
+    return rows
+
+
+def _gelu_approximation_row(
+    *,
+    layer_index: int,
+    operator_name: str,
+    operator_id: str,
+    candidate_id: str,
+    stats: dict[str, Any],
+) -> dict[str, Any]:
+    degree = gelu_degree_for_candidate(candidate_id)
+    scale = gelu_calibrated_scale(stats)
+    return {
+        "layer_index": layer_index,
+        "operator_name": operator_name,
+        "operator_id": operator_id,
+        "candidate_id": candidate_id,
+        "approximation_family": "calibrated_chebyshev_gelu",
+        "degree": degree,
+        "scale": scale,
+        "tail_policy": "negative_zero_positive_identity_plaintext_only",
+        "chebyshev_coefficients": list(gelu_chebyshev_coefficients(scale=scale, degree=degree)),
+        "power_coefficients": list(gelu_power_coefficients(scale=scale, degree=degree)),
+    }
+
+
 def _public_ckks_config(ckks_config: dict[str, Any]) -> dict[str, Any]:
     keys = [
         "ckks_param_id",
@@ -180,5 +250,13 @@ def _public_ckks_config(ckks_config: dict[str, Any]) -> dict[str, Any]:
         "multiplicative_depth",
         "bootstrapping_supported",
         "default_scale_bits",
+        "bootstrap_enabled",
+        "bootstrap_level_budget",
+        "bootstrap_dim1",
+        "bootstrap_levels_after",
+        "bootstrap_num_iterations",
+        "bootstrap_precision",
+        "bootstrap_auto_guard",
+        "bootstrap_guard_min_levels",
     ]
     return {key: ckks_config[key] for key in keys if key in ckks_config}

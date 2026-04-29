@@ -19,7 +19,7 @@ def test_he_uniform_policy_picks_highest_feasible_candidate():
         quality="high",
     ).generate(operators)
 
-    assert schedule.entries[0].candidate_id == "gelu.poly.degree5.v1"
+    assert schedule.entries[0].candidate_id == "gelu.chebyshev.degree5.v1"
 
 
 def test_analyze_schedule_feasibility_inserts_bootstrap_and_counts_cost():
@@ -32,8 +32,8 @@ def test_analyze_schedule_feasibility_inserts_bootstrap_and_counts_cost():
     schedule = SchedulePlan(
         metadata={"policy": "test"},
         entries=[
-            ScheduleEntry(operators[0], "gelu.poly.degree5.v1", ckks_param_id="ckks_test"),
-            ScheduleEntry(operators[1], "gelu.poly.degree5.v1", ckks_param_id="ckks_test"),
+            ScheduleEntry(operators[0], "gelu.chebyshev.degree5.v1", ckks_param_id="ckks_test"),
+            ScheduleEntry(operators[1], "gelu.chebyshev.degree5.v1", ckks_param_id="ckks_test"),
         ],
     )
 
@@ -51,7 +51,7 @@ def test_analyze_schedule_feasibility_inserts_bootstrap_and_counts_cost():
     assert result.feasible
     assert result.estimated_bootstrap_count == 1
     assert result.schedule.entries[1].bootstrap_policy == "bootstrap_before"
-    assert result.total_cost.latency_ms == 15.0
+    assert result.total_cost.latency_ms == 15.2
     assert result.total_cost.bootstrap_count == 1
 
 

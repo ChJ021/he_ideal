@@ -1,9 +1,9 @@
 operator_type,candidate_id,approximation_family,quality_rank,degree,valid_input_range,depth,rotation_requirement,scale_requirement,supports_plaintext_simulation,supports_ckks_backend,expected_accuracy_risk,implementation_backend,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,bootstrap_count,memory_mb,weighted_cost,cost_source
 gelu,gelu.base,plaintext_reference,1000,0,,0,0,2^40,True,False,0.0,torch_reference,0.0,0,0,0,0,0,0,0.0,0.0,static_fallback
 gelu,gelu.exact.high.v1,calibrated_chebyshev_gelu,100,13,"[-8.0, 8.0]",5,0,2^40,True,True,0.0,torch,7.98,0,6,7,5,0,0,0.0,24.53,profile
-gelu,gelu.poly.degree5.v1,polynomial,80,5,"[-4.0, 4.0]",3,0,2^40,True,True,0.01,torch,2.85,0,3,4,3,0,0,0.0,12.149999999999999,profile
-gelu,gelu.poly.degree3.v1,polynomial,60,3,"[-3.0, 3.0]",2,0,2^40,True,True,0.03,torch,1.71,0,2,3,2,0,0,0.0,7.96,profile
-gelu,gelu.poly.degree2.v1,polynomial,30,2,"[-2.5, 2.5]",1,0,2^40,True,True,0.08,torch,0.912,0,1,2,1,0,0,0.0,4.112,profile
+gelu,gelu.chebyshev.degree11.v1,calibrated_chebyshev_gelu,90,11,"[-8.0, 8.0]",5,0,2^40,True,True,0.002,torch,5.8,0,5,6,5,0,0,0.0,21.200000000000003,profile
+gelu,gelu.chebyshev.degree9.v1,calibrated_chebyshev_gelu,75,9,"[-8.0, 8.0]",4,0,2^40,True,True,0.006,torch,4.4,0,4,5,4,0,0,0.0,16.75,profile
+gelu,gelu.chebyshev.degree5.v1,calibrated_chebyshev_gelu,55,5,"[-8.0, 8.0]",3,0,2^40,True,True,0.02,torch,2.6,0,3,4,3,0,0,0.0,11.899999999999999,profile
 layernorm,layernorm.base,plaintext_reference,1000,0,,0,0,2^40,True,False,0.0,torch_reference,0.0,0,0,0,0,0,0,0.0,0.0,static_fallback
 layernorm,layernorm.exact.high.v1,calibrated_clipped_rsqrt_polynomial,100,9,"[0.05, 8.0]",6,0,2^40,True,True,0.0,torch,9.69,2,6,7,6,0,0,0.0,28.240000000000002,profile
 layernorm,layernorm.newton.low_iter.v1,newton,70,2,,3,0,2^40,True,True,0.04,torch,3.42,2,3,0,3,0,0,0.0,12.219999999999999,profile

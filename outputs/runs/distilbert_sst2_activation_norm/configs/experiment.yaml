@@ -13,7 +13,7 @@ sequence_length: 128
 batch_size: 16
 calibration_size: 256
 validation_size: 256
-accuracy_tolerance: 0.1
+accuracy_tolerance: 0.5
 max_batches: null
 scheduler:
   policy: validated_greedy

@@ -18,7 +18,7 @@ def test_uniform_policy_generates_one_entry_per_operator():
     ]
     schedule = UniformPolicy(registry, quality="low").generate(operators)
     assert len(schedule.entries) == 2
-    assert schedule.entries[0].candidate_id == "gelu.poly.degree2.v1"
+    assert schedule.entries[0].candidate_id == "gelu.chebyshev.degree5.v1"
 
 
 def test_base_policy_is_separate_from_uniform_high():
@@ -37,7 +37,7 @@ def test_greedy_policy_respects_accuracy_budget():
     records = [
         SensitivityRecord(
             operator_key=operators[0],
-            candidate_id="gelu.poly.degree2.v1",
+            candidate_id="gelu.chebyshev.degree5.v1",
             baseline_accuracy=1.0,
             candidate_accuracy=0.98,
             accuracy_drop=0.02,
@@ -46,7 +46,7 @@ def test_greedy_policy_respects_accuracy_budget():
         ),
         SensitivityRecord(
             operator_key=operators[0],
-            candidate_id="gelu.poly.degree3.v1",
+            candidate_id="gelu.chebyshev.degree9.v1",
             baseline_accuracy=1.0,
             candidate_accuracy=0.995,
             accuracy_drop=0.005,
@@ -59,14 +59,14 @@ def test_greedy_policy_respects_accuracy_budget():
         cost_model=StaticCostModel(registry),
         max_accuracy_drop=0.01,
     ).generate(operators, records)
-    assert schedule.entries[0].candidate_id != "gelu.poly.degree2.v1"
+    assert schedule.entries[0].candidate_id != "gelu.chebyshev.degree5.v1"
 
 
 def test_validated_greedy_rejects_bad_combination():
     import numpy as np
     from types import SimpleNamespace
 
-    enabled = {"gelu.exact.high.v1", "gelu.poly.degree2.v1"}
+    enabled = {"gelu.exact.high.v1", "gelu.chebyshev.degree5.v1"}
     registry = build_default_registry(enabled)
     operators = [
         OperatorKey("m", 0, "gelu", "a", "a"),
@@ -75,7 +75,7 @@ def test_validated_greedy_rejects_bad_combination():
     records = [
         SensitivityRecord(
             operator_key=operator,
-            candidate_id="gelu.poly.degree2.v1",
+            candidate_id="gelu.chebyshev.degree5.v1",
             baseline_accuracy=1.0,
             candidate_accuracy=1.0,
             accuracy_drop=0.0,
@@ -106,5 +106,5 @@ def test_validated_greedy_rejects_bad_combination():
     assert len(accepted) == 1
     assert any("max_accuracy_drop" in decision.reason for decision in rejected)
     assert sum(
-        entry.candidate_id == "gelu.poly.degree2.v1" for entry in result.schedule.entries
+        entry.candidate_id == "gelu.chebyshev.degree5.v1" for entry in result.schedule.entries
     ) == 1

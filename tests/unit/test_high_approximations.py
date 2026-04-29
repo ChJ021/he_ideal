@@ -15,8 +15,18 @@ def test_gelu_high_approximation_is_closer_than_lower_degree():
     x = torch.linspace(-4.0, 4.0, 1000)
     base = registry.get("gelu.base").plaintext_impl()(x)
     high = registry.get("gelu.exact.high.v1").plaintext_impl()(x)
-    degree3 = registry.get("gelu.poly.degree3.v1").plaintext_impl()(x)
-    assert torch.max(torch.abs(high - base)) < torch.max(torch.abs(degree3 - base))
+    degree5 = registry.get("gelu.chebyshev.degree5.v1").plaintext_impl()(x)
+    assert torch.max(torch.abs(high - base)) < torch.max(torch.abs(degree5 - base))
+
+
+def test_higher_degree_gelu_candidate_improves_lower_degree():
+    registry = build_default_registry()
+    x = torch.linspace(-4.0, 4.0, 1000)
+    base = registry.get("gelu.base").plaintext_impl()(x)
+    degree9 = registry.get("gelu.chebyshev.degree9.v1").plaintext_impl()(x)
+    degree5 = registry.get("gelu.chebyshev.degree5.v1").plaintext_impl()(x)
+
+    assert torch.mean((degree9 - base).pow(2)) < torch.mean((degree5 - base).pow(2))
 
 
 def test_layernorm_high_approximation_is_closer_than_affine():

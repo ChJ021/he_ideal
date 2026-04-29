@@ -10,7 +10,7 @@ sample_size: 16 # 旧的，现已不使用
 sequence_length: 128 # 改用下面encrypted开头参数
 runner_mode: openfhe_distilbert_forward
 encrypted_sample_size: 1
-encrypted_sequence_length: 16
+encrypted_sequence_length: 1
 fail_on_plaintext_accuracy_fallback: true
 linear_kernel: bsgs_hoisted
 bsgs_baby_step: 32

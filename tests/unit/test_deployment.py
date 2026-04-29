@@ -229,6 +229,15 @@ def test_forward_mode_passes_manifest_and_requires_native_accuracy(tmp_path: Pat
     assert all(request.first_mod_size == 55 for request in backend.requests)
     assert all(request.poly_modulus_degree == 4096 for request in backend.requests)
     assert all(request.to_dict()["multiplicative_depth"] == 33 for request in backend.requests)
+    assert all(request.bootstrap_enabled for request in backend.requests)
+    assert all(request.bootstrap_level_budget == (4, 4) for request in backend.requests)
+    assert all(request.bootstrap_dim1 == (0, 0) for request in backend.requests)
+    assert all(request.bootstrap_levels_after == 10 for request in backend.requests)
+    assert all(request.bootstrap_num_iterations == 1 for request in backend.requests)
+    assert all(request.bootstrap_precision == 0 for request in backend.requests)
+    assert all(request.bootstrap_auto_guard for request in backend.requests)
+    assert all(request.bootstrap_guard_min_levels == 2 for request in backend.requests)
+    assert all(request.to_dict()["bootstrap_level_budget"] == [4, 4] for request in backend.requests)
     assert all(request.linear_kernel == "bsgs_hoisted" for request in backend.requests)
     assert all(request.bsgs_baby_step == 16 for request in backend.requests)
     assert all(request.fuse_qkv for request in backend.requests)
@@ -283,7 +292,7 @@ def _write_deployment_fixture(
         tmp_path / "dataset.yaml",
     )
     save_yaml(
-        {"candidates": [{"candidate_id": "gelu.poly.degree2.v1", "enabled": True}]},
+        {"candidates": [{"candidate_id": "gelu.chebyshev.degree5.v1", "enabled": True}]},
         tmp_path / "approximations.yaml",
     )
     save_yaml(
@@ -320,6 +329,14 @@ def _write_deployment_fixture(
                 "scaling_mod_size": 44,
                 "first_mod_size": 55,
                 "poly_modulus_degree": 4096,
+                "bootstrap_enabled": True,
+                "bootstrap_level_budget": [4, 4],
+                "bootstrap_dim1": [0, 0],
+                "bootstrap_levels_after": 10,
+                "bootstrap_num_iterations": 1,
+                "bootstrap_precision": 0,
+                "bootstrap_auto_guard": True,
+                "bootstrap_guard_min_levels": 2,
             },
         },
         tmp_path / "openfhe.yaml",
@@ -346,7 +363,7 @@ def _write_deployment_fixture(
     )
     generated = SchedulePlan(
         metadata={"policy": "validated_greedy"},
-        entries=[ScheduleEntry(operator, "gelu.poly.degree2.v1")],
+        entries=[ScheduleEntry(operator, "gelu.chebyshev.degree5.v1")],
     )
     save_yaml(high.to_dict(), paths.schedule_dir() / "uniform_high.yaml")
     save_yaml(generated.to_dict(), paths.schedule_dir() / "hetune_generated.yaml")

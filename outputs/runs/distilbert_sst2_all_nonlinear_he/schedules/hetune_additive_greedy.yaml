@@ -13,7 +13,7 @@ metadata:
   policy: hetune_greedy
   estimated_additive_accuracy_drop: 0.01953125
   he_feasible: true
-  estimated_bootstrap_count: 7
+  estimated_bootstrap_count: 6
   unsupported_rows: 0
   he_backend_id: seal_cpu
   ckks_param_id: seal_profiled_bootstrap
@@ -28,7 +28,7 @@ entries:
   operator_id: distilbert_sst2.layer0.gelu.ffn_activation
   layer_index: 0
   operator_type: gelu
-  candidate_id: gelu.exact.high.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
   level_budget: 6
@@ -47,7 +47,7 @@ entries:
   candidate_id: softmax.power.degree2.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 1
+  level_budget: 3
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -63,7 +63,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 0
+  level_budget: 2
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -79,7 +79,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 0
+  level_budget: 2
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -92,7 +92,7 @@ entries:
   operator_id: distilbert_sst2.layer1.gelu.ffn_activation
   layer_index: 1
   operator_type: gelu
-  candidate_id: gelu.exact.high.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
   level_budget: 6
@@ -111,7 +111,7 @@ entries:
   candidate_id: softmax.power.degree2.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 1
+  level_budget: 3
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -127,7 +127,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 0
+  level_budget: 2
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -156,11 +156,11 @@ entries:
   operator_id: distilbert_sst2.layer2.gelu.ffn_activation
   layer_index: 2
   operator_type: gelu
-  candidate_id: gelu.exact.high.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 6
-  bootstrap_policy: bootstrap_before
+  level_budget: 3
+  bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
     model_id: distilbert_sst2
@@ -175,8 +175,8 @@ entries:
   candidate_id: softmax.power.degree2.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 1
-  bootstrap_policy: none
+  level_budget: 6
+  bootstrap_policy: bootstrap_before
   layout_id: ckks_profiled
 - operator_key:
     model_id: distilbert_sst2
@@ -191,7 +191,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 0
+  level_budget: 5
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -207,8 +207,8 @@ entries:
   candidate_id: layernorm.newton.low_iter.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 6
-  bootstrap_policy: bootstrap_before
+  level_budget: 5
+  bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
     model_id: distilbert_sst2
@@ -220,7 +220,7 @@ entries:
   operator_id: distilbert_sst2.layer3.gelu.ffn_activation
   layer_index: 3
   operator_type: gelu
-  candidate_id: gelu.exact.high.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
   level_budget: 6
@@ -239,7 +239,7 @@ entries:
   candidate_id: softmax.power.degree2.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 1
+  level_budget: 3
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -255,7 +255,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 0
+  level_budget: 2
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -284,7 +284,7 @@ entries:
   operator_id: distilbert_sst2.layer4.gelu.ffn_activation
   layer_index: 4
   operator_type: gelu
-  candidate_id: gelu.poly.degree2.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
   level_budget: 3
@@ -303,8 +303,8 @@ entries:
   candidate_id: softmax.power.degree2.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 2
-  bootstrap_policy: none
+  level_budget: 6
+  bootstrap_policy: bootstrap_before
   layout_id: ckks_profiled
 - operator_key:
     model_id: distilbert_sst2
@@ -319,7 +319,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 1
+  level_budget: 5
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -335,7 +335,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 1
+  level_budget: 5
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -348,10 +348,10 @@ entries:
   operator_id: distilbert_sst2.layer5.gelu.ffn_activation
   layer_index: 5
   operator_type: gelu
-  candidate_id: gelu.poly.degree2.v1
+  candidate_id: gelu.chebyshev.degree5.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 1
+  level_budget: 5
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -367,8 +367,8 @@ entries:
   candidate_id: softmax.power.degree2.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 6
-  bootstrap_policy: bootstrap_before
+  level_budget: 2
+  bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
     model_id: distilbert_sst2
@@ -383,7 +383,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 5
+  level_budget: 1
   bootstrap_policy: none
   layout_id: ckks_profiled
 - operator_key:
@@ -399,7 +399,7 @@ entries:
   candidate_id: layernorm.affine.low_cost.v1
   ckks_param_id: seal_profiled_bootstrap
   scale_id: scale_2_40
-  level_budget: 5
+  level_budget: 1
   bootstrap_policy: none
   layout_id: ckks_profiled
 constraints:

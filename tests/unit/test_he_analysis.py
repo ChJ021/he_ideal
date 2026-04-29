@@ -17,7 +17,7 @@ def test_profiled_cost_model_prefers_profile_costs(tmp_path: Path):
         "\n".join(
             [
                 "backend_id,ckks_param_id,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb",
-                "openfhe_cpu,ckks_test,gelu.poly.degree2.v1,9.0,1,2,3,4,5,6,0,7.0",
+                "openfhe_cpu,ckks_test,gelu.chebyshev.degree5.v1,9.0,1,2,3,4,5,6,0,7.0",
             ]
         )
         + "\n",
@@ -32,10 +32,10 @@ def test_profiled_cost_model_prefers_profile_costs(tmp_path: Path):
     )
     operator = OperatorKey("mock", 0, "gelu", "ffn_activation", "layer.0.act")
 
-    profiled, source = model.estimate_with_source(operator, "gelu.poly.degree2.v1")
+    profiled, source = model.estimate_with_source(operator, "gelu.chebyshev.degree5.v1")
     fallback, fallback_source = model.estimate_with_source(
         operator,
-        "gelu.poly.degree3.v1",
+        "gelu.chebyshev.degree9.v1",
     )
 
     assert profiled.latency_ms == 9.0
@@ -52,7 +52,7 @@ def test_profiled_cost_model_required_mismatch_raises_clear_error(tmp_path: Path
         "\n".join(
             [
                 "backend_id,ckks_param_id,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb",
-                "openfhe_cpu,ckks_other,gelu.poly.degree2.v1,9.0,1,2,3,4,5,6,0,7.0",
+                "openfhe_cpu,ckks_other,gelu.chebyshev.degree5.v1,9.0,1,2,3,4,5,6,0,7.0",
             ]
         )
         + "\n",
@@ -76,7 +76,7 @@ def test_profiled_cost_model_strict_coverage_flags_missing_candidates(tmp_path: 
         "\n".join(
             [
                 "backend_id,ckks_param_id,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb",
-                "openfhe_cpu,ckks_test,gelu.poly.degree2.v1,1.0,0,1,2,1,0,1,0,8.0",
+                "openfhe_cpu,ckks_test,gelu.chebyshev.degree5.v1,1.0,0,1,2,1,0,1,0,8.0",
             ]
         )
         + "\n",
@@ -94,7 +94,7 @@ def test_profiled_cost_model_strict_coverage_flags_missing_candidates(tmp_path: 
     operator = OperatorKey("mock", 0, "gelu", "ffn_activation", "layer.0.act")
     schedule = SchedulePlan(
         metadata={"policy": "test"},
-        entries=[ScheduleEntry(operator, "gelu.poly.degree3.v1", ckks_param_id="ckks_test")],
+        entries=[ScheduleEntry(operator, "gelu.chebyshev.degree9.v1", ckks_param_id="ckks_test")],
     )
 
     coverage = model.coverage_for_schedule(schedule)
@@ -103,7 +103,7 @@ def test_profiled_cost_model_strict_coverage_flags_missing_candidates(tmp_path: 
     assert coverage.used_candidates_missing_profile == 1
     assert not coverage.strict_profile_check_passed
     assert coverage.strict_profile_check_reason == "missing_profile_for_used_candidates"
-    with pytest.raises(ProfileValidationError, match="missing_profile_candidates=gelu.poly.degree3.v1"):
+    with pytest.raises(ProfileValidationError, match="missing_profile_candidates=gelu.chebyshev.degree9.v1"):
         model.require_schedule_coverage(schedule, "test")
 
 
@@ -115,7 +115,7 @@ def test_bootstrap_plan_flags_level_overflow():
     schedule = SchedulePlan(
         metadata={},
         entries=[
-            ScheduleEntry(operator, "gelu.poly.degree3.v1")
+            ScheduleEntry(operator, "gelu.chebyshev.degree9.v1")
             for operator in operators
         ],
     )
@@ -145,7 +145,7 @@ def test_he_analysis_runner_writes_outputs_without_loading_model(tmp_path: Path)
         "\n".join(
             [
                 "backend_id,ckks_param_id,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb",
-                "openfhe_cpu,ckks_test,gelu.poly.degree2.v1,1.0,0,1,2,1,0,1,0,8.0",
+                "openfhe_cpu,ckks_test,gelu.chebyshev.degree5.v1,1.0,0,1,2,1,0,1,0,8.0",
             ]
         )
         + "\n",
@@ -163,7 +163,7 @@ def test_he_analysis_runner_writes_outputs_without_loading_model(tmp_path: Path)
         tmp_path / "dataset.yaml",
     )
     save_yaml(
-        {"candidates": [{"candidate_id": "gelu.poly.degree2.v1", "enabled": True}]},
+        {"candidates": [{"candidate_id": "gelu.chebyshev.degree5.v1", "enabled": True}]},
         tmp_path / "approximations.yaml",
     )
     save_yaml(
@@ -203,7 +203,7 @@ def test_he_analysis_runner_writes_outputs_without_loading_model(tmp_path: Path)
     operator = OperatorKey("mock", 0, "gelu", "ffn_activation", "layer.0.act")
     schedule = SchedulePlan(
         metadata={"experiment_id": "mock_exp"},
-        entries=[ScheduleEntry(operator, "gelu.poly.degree2.v1")],
+        entries=[ScheduleEntry(operator, "gelu.chebyshev.degree5.v1")],
     )
     save_yaml(schedule.to_dict(), schedule_dir / "hetune_generated.yaml")
 
@@ -229,7 +229,7 @@ def test_he_analysis_runner_raises_on_strict_profile_failure(tmp_path: Path):
         "\n".join(
             [
                 "backend_id,ckks_param_id,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb",
-                "openfhe_cpu,ckks_test,gelu.poly.degree2.v1,1.0,0,1,2,1,0,1,0,8.0",
+                "openfhe_cpu,ckks_test,gelu.chebyshev.degree5.v1,1.0,0,1,2,1,0,1,0,8.0",
             ]
         )
         + "\n",
@@ -249,8 +249,8 @@ def test_he_analysis_runner_raises_on_strict_profile_failure(tmp_path: Path):
     save_yaml(
         {
             "candidates": [
-                {"candidate_id": "gelu.poly.degree2.v1", "enabled": True},
-                {"candidate_id": "gelu.poly.degree3.v1", "enabled": True},
+                {"candidate_id": "gelu.chebyshev.degree5.v1", "enabled": True},
+                {"candidate_id": "gelu.chebyshev.degree9.v1", "enabled": True},
             ]
         },
         tmp_path / "approximations.yaml",
@@ -292,9 +292,9 @@ def test_he_analysis_runner_raises_on_strict_profile_failure(tmp_path: Path):
     operator = OperatorKey("mock", 0, "gelu", "ffn_activation", "layer.0.act")
     schedule = SchedulePlan(
         metadata={"experiment_id": "mock_exp_fail"},
-        entries=[ScheduleEntry(operator, "gelu.poly.degree3.v1", ckks_param_id="ckks_test")],
+        entries=[ScheduleEntry(operator, "gelu.chebyshev.degree9.v1", ckks_param_id="ckks_test")],
     )
     save_yaml(schedule.to_dict(), schedule_dir / "hetune_generated.yaml")
 
-    with pytest.raises(ProfileValidationError, match="missing_profile_candidates=gelu.poly.degree3.v1"):
+    with pytest.raises(ProfileValidationError, match="missing_profile_candidates=gelu.chebyshev.degree9.v1"):
         HEAnalysisRunner(tmp_path / "experiment.yaml").run()

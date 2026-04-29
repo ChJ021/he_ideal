@@ -10,13 +10,7 @@ metadata:
   - gelu
   - layernorm
   - softmax
-  he_feasible: true
-  estimated_bootstrap_count: 21
-  unsupported_rows: 0
-  he_backend_id: seal_cpu
-  ckks_param_id: seal_profiled_bootstrap
   policy: base_reference
-  source_schedule: /home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear_he/schedules/hetune_generated.yaml
 entries:
 - operator_key:
     model_id: distilbert_sst2
@@ -33,7 +27,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 0
@@ -49,7 +43,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 0
@@ -65,7 +59,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 0
@@ -81,7 +75,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 1
@@ -97,7 +91,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 1
@@ -113,7 +107,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 1
@@ -129,7 +123,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 1
@@ -145,7 +139,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 2
@@ -161,7 +155,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 2
@@ -177,7 +171,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 2
@@ -193,7 +187,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 2
@@ -209,7 +203,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 3
@@ -225,7 +219,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 3
@@ -241,7 +235,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 3
@@ -257,7 +251,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 3
@@ -273,7 +267,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 4
@@ -289,7 +283,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 4
@@ -305,7 +299,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 4
@@ -321,7 +315,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 4
@@ -337,7 +331,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 5
@@ -353,7 +347,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 5
@@ -369,7 +363,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 5
@@ -385,7 +379,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 - operator_key:
     model_id: distilbert_sst2
     layer_index: 5
@@ -401,7 +395,7 @@ entries:
   scale_id: scale_2_40
   level_budget: 0
   bootstrap_policy: none
-  layout_id: plaintext_reference
+  layout_id: plaintext_sim
 constraints:
   max_accuracy_drop: 0.02
   max_logit_kl: 0.02
@@ -411,8 +405,3 @@ constraints:
   min_security_bits: 128
   operator_scope: all_nonlinear
   operator_types: *id001
-  he_aware: true
-  available_levels: 6
-  bootstrapping_supported: true
-  max_bootstrap_count: null
-  protected_operator_types: []

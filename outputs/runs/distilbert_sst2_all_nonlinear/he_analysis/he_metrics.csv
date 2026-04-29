@@ -1,6 +1,0 @@
-schedule,entries,profile_entries,static_fallback_entries,profile_coverage_rate,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb,weighted_cost
-base,24,0,24,0.0,0.0,0,0,0,0,0,0,0,0.0,0.0
-hetune_generated,24,24,0,1.0,277.70000000000005,216,124,26,124,56,124,0,1488.0,689.2800000000001
-uniform_low,24,24,0,1.0,45.59999999999999,48,12,36,12,0,12,0,624.0,94.43999999999998
-uniform_mid,24,24,0,1.0,94.2,108,36,54,36,12,36,0,888.0,225.78000000000003
-uniform_high,24,24,0,1.0,298.2000000000001,228,132,24,132,60,132,0,1548.0,735.4800000000001

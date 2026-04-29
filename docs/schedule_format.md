@@ -19,7 +19,7 @@ entries:
       operator_type: gelu
       name: ffn_activation
       path: bert.encoder.layer.0.intermediate.intermediate_act_fn
-    candidate_id: gelu.poly.degree3.v1
+    candidate_id: gelu.chebyshev.degree9.v1
     ckks_param_id: static_ckks_128
     scale_id: scale_2_40
     level_budget: 0

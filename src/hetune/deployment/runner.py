@@ -230,6 +230,22 @@ class HEDeploymentRunner:
             packing_strategy=self.config.packing_strategy,
             token_block_size=self.config.token_block_size,
             profile_native_stages=self.config.profile_native_stages,
+            bootstrap_enabled=_bool_config(
+                native_ckks_config,
+                "bootstrap_enabled",
+                bool(native_ckks_config.get("bootstrapping_supported", False)),
+            ),
+            bootstrap_level_budget=_int_pair_config(
+                native_ckks_config,
+                "bootstrap_level_budget",
+                (4, 4),
+            ),
+            bootstrap_dim1=_int_pair_config(native_ckks_config, "bootstrap_dim1", (0, 0)),
+            bootstrap_levels_after=_int_config(native_ckks_config, "bootstrap_levels_after", 10),
+            bootstrap_num_iterations=_int_config(native_ckks_config, "bootstrap_num_iterations", 1),
+            bootstrap_precision=_int_config(native_ckks_config, "bootstrap_precision", 0),
+            bootstrap_auto_guard=_bool_config(native_ckks_config, "bootstrap_auto_guard", True),
+            bootstrap_guard_min_levels=_int_config(native_ckks_config, "bootstrap_guard_min_levels", 2),
             metadata={
                 **metadata,
                 "schedule_hash": _sha256(schedule_path),
@@ -357,3 +373,19 @@ def _int_config(config: dict[str, Any], key: str, fallback: int) -> int:
     if value is None or value == "":
         return fallback
     return int(value)
+
+
+def _bool_config(config: dict[str, Any], key: str, fallback: bool) -> bool:
+    value = config.get(key, fallback)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _int_pair_config(config: dict[str, Any], key: str, fallback: tuple[int, int]) -> tuple[int, int]:
+    value = config.get(key, fallback)
+    if isinstance(value, (list, tuple)) and len(value) >= 2:
+        return (int(value[0]), int(value[1]))
+    return fallback

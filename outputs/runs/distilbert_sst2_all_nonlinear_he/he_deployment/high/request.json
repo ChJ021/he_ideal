@@ -8,20 +8,40 @@
   "output_dir": "/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear_he/he_deployment/high",
   "overrides_path": null,
   "sample_size": 1,
-  "sequence_length": 16,
+  "sequence_length": 1,
   "latency_repetitions": 1,
   "runner_mode": "openfhe_distilbert_forward",
   "forward_manifest_path": "/home/cj/he_ideal/hetuned_llm/outputs/runs/distilbert_sst2_all_nonlinear_he/he_deployment/forward_artifacts/high/manifest.json",
-  "multiplicative_depth": 60,
+  "multiplicative_depth": 30,
   "scaling_mod_size": 59,
   "first_mod_size": 60,
-  "poly_modulus_degree": 32768,
+  "poly_modulus_degree": 16384,
+  "linear_kernel": "bsgs_hoisted",
+  "bsgs_baby_step": 32,
+  "fuse_qkv": true,
+  "packing_strategy": "row_packed",
+  "token_block_size": "auto",
+  "profile_native_stages": true,
+  "bootstrap_enabled": true,
+  "bootstrap_level_budget": [
+    4,
+    4
+  ],
+  "bootstrap_dim1": [
+    0,
+    0
+  ],
+  "bootstrap_levels_after": 10,
+  "bootstrap_num_iterations": 1,
+  "bootstrap_precision": 0,
+  "bootstrap_auto_guard": true,
+  "bootstrap_guard_min_levels": 2,
   "ckks_config": {
     "ckks_param_id": "seal_profiled_bootstrap",
     "backend": "seal-profiled",
     "backend_id": "seal_cpu",
     "security_bits": 128,
-    "poly_modulus_degree": 32768,
+    "poly_modulus_degree": 16384,
     "coefficient_modulus_chain": [
       60,
       40,
@@ -55,8 +75,22 @@
     "backend_profile_path": "benchmarks/ckks_operator_benchmarks/example_seal_profile_bootstrap.csv",
     "scaling_mod_size": 59,
     "first_mod_size": 60,
-    "multiplicative_depth": 60,
-    "default_scale_bits": 40
+    "multiplicative_depth": 30,
+    "default_scale_bits": 40,
+    "bootstrap_enabled": true,
+    "bootstrap_level_budget": [
+      4,
+      4
+    ],
+    "bootstrap_dim1": [
+      0,
+      0
+    ],
+    "bootstrap_levels_after": 10,
+    "bootstrap_num_iterations": 1,
+    "bootstrap_precision": 0,
+    "bootstrap_auto_guard": true,
+    "bootstrap_guard_min_levels": 2
   },
   "metadata": {
     "deployment_id": "distilbert_sst2_openfhe",
@@ -94,7 +128,7 @@
       }
     },
     "runner_mode": "openfhe_distilbert_forward",
-    "encrypted_sequence_length": 16,
+    "encrypted_sequence_length": 1,
     "encrypted_sample_size": 1,
     "schedule_hash": "a260db32bc1c6bf202c69d2d5dbbba69f9d300e8e05e6587c7a8ed47c073dade",
     "overrides_hash": "",

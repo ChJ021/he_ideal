@@ -34,6 +34,6 @@
     }
   },
   "runner_mode": "openfhe_distilbert_forward",
-  "encrypted_sequence_length": 16,
+  "encrypted_sequence_length": 1,
   "encrypted_sample_size": 1
 }

@@ -68,6 +68,14 @@ class DeploymentCaseRequest:
     packing_strategy: str = "row_packed"
     token_block_size: str = "auto"
     profile_native_stages: bool = True
+    bootstrap_enabled: bool = False
+    bootstrap_level_budget: tuple[int, int] = (4, 4)
+    bootstrap_dim1: tuple[int, int] = (0, 0)
+    bootstrap_levels_after: int = 10
+    bootstrap_num_iterations: int = 1
+    bootstrap_precision: int = 0
+    bootstrap_auto_guard: bool = True
+    bootstrap_guard_min_levels: int = 2
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -94,6 +102,14 @@ class DeploymentCaseRequest:
             "packing_strategy": self.packing_strategy,
             "token_block_size": self.token_block_size,
             "profile_native_stages": self.profile_native_stages,
+            "bootstrap_enabled": self.bootstrap_enabled,
+            "bootstrap_level_budget": list(self.bootstrap_level_budget),
+            "bootstrap_dim1": list(self.bootstrap_dim1),
+            "bootstrap_levels_after": self.bootstrap_levels_after,
+            "bootstrap_num_iterations": self.bootstrap_num_iterations,
+            "bootstrap_precision": self.bootstrap_precision,
+            "bootstrap_auto_guard": self.bootstrap_auto_guard,
+            "bootstrap_guard_min_levels": self.bootstrap_guard_min_levels,
             "ckks_config": dict(self.ckks_config or {}),
             "metadata": dict(self.metadata),
         }
@@ -155,6 +171,10 @@ class DeploymentCaseResult:
             "ffn_ms": metadata.get("ffn_ms", ""),
             "classifier_ms": metadata.get("classifier_ms", ""),
             "decrypt_ms": metadata.get("decrypt_ms", ""),
+            "bootstrap_mode": metadata.get("bootstrap_mode", ""),
+            "bootstrap_ms": metadata.get("bootstrap_ms", ""),
+            "bootstrap_policy_count": metadata.get("bootstrap_policy_count", ""),
+            "bootstrap_auto_count": metadata.get("bootstrap_auto_count", ""),
             "sample_count": self.sample_count,
             "latency_ms": self.latency_ms,
             "latency_p50_ms": self.latency_p50_ms,

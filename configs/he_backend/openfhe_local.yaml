@@ -8,14 +8,21 @@ python_dir: /home/cj/github/openfhe/openfhe-python
 runner_path: ../../build/openfhe_runner/hetune_openfhe_runner
 ckks:
   security_bits: 128
-  poly_modulus_degree: 16384 # 32768
+  poly_modulus_degree: 16384
   scaling_mod_size: 59
   first_mod_size: 60
-  multiplicative_depth: 30 # 60
+  multiplicative_depth: 30
   bootstrapping_supported: true
   default_scale_bits: 40
+  bootstrap_enabled: true
+  bootstrap_level_budget: [4, 4]
+  bootstrap_dim1: [0, 0]
+  bootstrap_levels_after: 10
+  bootstrap_num_iterations: 1
+  bootstrap_precision: 0
+  bootstrap_auto_guard: true
+  bootstrap_guard_min_levels: 2
 notes: >
   OpenFHE is intentionally kept outside this repository. Only third-party
   OpenFHE files live under /home/cj/github/openfhe; the HETune native runner
   is built inside this repository under build/openfhe_runner.
-

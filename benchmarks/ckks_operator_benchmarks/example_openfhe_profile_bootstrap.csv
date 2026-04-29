@@ -1,8 +1,8 @@
 backend_id,ckks_param_id,candidate_id,latency_ms,rotations,ct_ct_mults,ct_pt_mults,rescale_count,relin_count,depth,bootstrap_count,memory_mb
 openfhe_cpu,ckks_128_profiled_bootstrap,gelu.exact.high.v1,7.98,0,6,7,5,0,5,0,0.0
-openfhe_cpu,ckks_128_profiled_bootstrap,gelu.poly.degree2.v1,0.912,0,1,2,1,0,1,0,0.0
-openfhe_cpu,ckks_128_profiled_bootstrap,gelu.poly.degree3.v1,1.71,0,2,3,2,0,2,0,0.0
-openfhe_cpu,ckks_128_profiled_bootstrap,gelu.poly.degree5.v1,2.85,0,3,4,3,0,3,0,0.0
+openfhe_cpu,ckks_128_profiled_bootstrap,gelu.chebyshev.degree11.v1,5.8,0,5,6,5,0,5,0,0.0
+openfhe_cpu,ckks_128_profiled_bootstrap,gelu.chebyshev.degree9.v1,4.4,0,4,5,4,0,4,0,0.0
+openfhe_cpu,ckks_128_profiled_bootstrap,gelu.chebyshev.degree5.v1,2.6,0,3,4,3,0,3,0,0.0
 openfhe_cpu,ckks_128_profiled_bootstrap,layernorm.affine.low_cost.v1,0.456,0,0,1,0,0,0,0,0.0
 openfhe_cpu,ckks_128_profiled_bootstrap,layernorm.centered.mid_cost.v1,1.368,1,1,2,1,0,1,0,0.0
 openfhe_cpu,ckks_128_profiled_bootstrap,layernorm.exact.high.v1,9.69,2,6,7,6,0,6,0,0.0
