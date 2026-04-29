@@ -19,4 +19,3 @@ notes: >
   OpenFHE files live under /home/cj/github/openfhe; the HETune native runner
   is built inside this repository under build/openfhe_runner.
 
-# 32768 + 59 + 60 造成巨大的内存占用，暂时调低便于测试
